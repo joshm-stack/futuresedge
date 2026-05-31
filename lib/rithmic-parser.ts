@@ -150,4 +150,54 @@ export function parseRithmicCSV(csvText: string): ParseResult {
     if (!dt) { skipped++; continue; }
 
     const commRaw = get('commission');
-    const
+    const commission = commRaw ? Math.abs(parseFloat(commRaw.replace(/[^0-9.-]/g, '')) || 0) : 0;
+
+    fills.push({ account: get('account'), symbol: symbolRaw, date: dt.date, time: dt.time, side, qty, price, commission, orderNumber: get('order_number') });
+  }
+
+  if (!fills.length) {
+    return { trades: [], skipped, errors: ['No filled orders found. Make sure you are exporting from the Completed Orders section.'], rawRows: dataRows.length };
+  }
+
+  const grouped: Record<string, RithmicFill[]> = {};
+  for (const fill of fills) {
+    const key = `${cleanSymbol(fill.symbol)}|${fill.date}`;
+    if (!grouped[key]) grouped[key] = [];
+    grouped[key].push(fill);
+  }
+
+  const trades: ParsedTrade[] = [];
+
+  for (const [key, dayFills] of Object.entries(grouped)) {
+    const [symbol, date] = key.split('|');
+    dayFills.sort((a, b) => a.time.localeCompare(b.time));
+
+    const buys = dayFills.filter(f => f.side === 'Buy');
+    const sells = dayFills.filter(f => f.side === 'Sell');
+    const isLong = dayFills[0].side === 'Buy';
+    const entries = isLong ? buys : sells;
+    const exits = isLong ? sells : buys;
+
+    const totalEntryQty = entries.reduce((a, f) => a + f.qty, 0);
+    const totalExitQty = exits.reduce((a, f) => a + f.qty, 0);
+    const matchedQty = Math.min(totalEntryQty, totalExitQty);
+    if (matchedQty <= 0) { skipped++; continue; }
+
+    const avgEntry = entries.reduce((a, f) => a + f.price * f.qty, 0) / totalEntryQty;
+    const avgExit = exits.reduce((a, f) => a + f.price * f.qty, 0) / totalExitQty;
+    const totalFees = [...entries, ...exits].reduce((a, f) => a + f.commission, 0);
+    const grossPnl = isLong ? (avgExit - avgEntry) * matchedQty : (avgEntry - avgExit) * matchedQty;
+    const netPnl = grossPnl - totalFees;
+
+    trades.push({
+      date, contract: symbol, direction: isLong ? 'Long' : 'Short',
+      session: inferSession(entries[0]?.time || '09:30:00'),
+      quantity: matchedQty,
+      entry_price: +avgEntry.toFixed(4), exit_price: +avgExit.toFixed(4),
+      fees: +totalFees.toFixed(2), gross_pnl: +grossPnl.toFixed(2), net_pnl: +netPnl.toFixed(2),
+    });
+  }
+
+  trades.sort((a, b) => b.date.localeCompare(a.date));
+  return { trades, skipped, errors, rawRows: dataRows.length };
+}
