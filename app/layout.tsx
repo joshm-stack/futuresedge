@@ -10,7 +10,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+      </head>
+      <body style={{ fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif" }}>
         {children}
         <Toaster
           position="bottom-right"
@@ -21,6 +24,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               border: '1px solid #313856',
               borderRadius: '10px',
               fontSize: '13px',
+              fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif",
             },
           }}
         />
