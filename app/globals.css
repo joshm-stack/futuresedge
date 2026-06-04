@@ -3,41 +3,66 @@
 @tailwind utilities;
 
 :root {
-  --font-geist: -apple-system, BlinkMacSystemFont, 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif;
-  --font-mono: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+  --font: -apple-system, BlinkMacSystemFont, 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'Cascadia Code', 'Consolas', monospace;
+
+  /* Light mode (default) */
+  --bg: #f0f2f5;
+  --bg-card: #ffffff;
+  --bg-input: #f8f9fb;
+  --bg-hover: #f4f5f8;
+  --border: #e2e5ed;
+  --border-2: #d0d4de;
+  --text: #0f1117;
+  --text-2: #4a5270;
+  --text-3: #8892b8;
+  --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
 }
 
-* {
-  box-sizing: border-box;
+.dark {
+  --bg: #0c0e14;
+  --bg-card: #12151f;
+  --bg-input: #181c2a;
+  --bg-hover: #1e2336;
+  --border: #252b40;
+  --border-2: #313856;
+  --text: #e2e8ff;
+  --text-2: #8892b8;
+  --text-3: #4a5270;
+  --shadow: 0 1px 3px rgba(0,0,0,0.3);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
 }
+
+* { box-sizing: border-box; }
 
 html {
-  font-family: var(--font-geist);
+  font-family: var(--font);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
 }
 
 body {
-  background: #0c0e14;
-  color: #e2e8ff;
+  background: var(--bg);
+  color: var(--text);
   min-height: 100vh;
-  font-feature-settings: 'cv11', 'ss01';
+  transition: background 0.2s, color 0.2s;
 }
 
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #252b40; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #313856; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--border-2); }
 
 input, select, textarea {
-  background: #181c2a;
-  border: 1px solid #252b40;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
   border-radius: 8px;
-  color: #e2e8ff;
+  color: var(--text);
   padding: 9px 12px;
   font-size: 13px;
-  font-family: var(--font-geist);
+  font-family: var(--font);
   outline: none;
   transition: border-color 0.15s;
   width: 100%;
@@ -45,18 +70,18 @@ input, select, textarea {
 
 input:focus, select:focus, textarea:focus {
   border-color: #4f7ef8;
+  box-shadow: 0 0 0 3px rgba(79,126,248,0.1);
 }
 
-input::placeholder, textarea::placeholder {
-  color: #4a5270;
-}
+input::placeholder, textarea::placeholder { color: var(--text-3); }
+select option { background: var(--bg-card); color: var(--text); }
+textarea { resize: vertical; }
 
-select option {
-  background: #181c2a;
-}
-
-textarea {
-  resize: vertical;
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
 }
 
 .tag-pill {
@@ -67,13 +92,12 @@ textarea {
   border-radius: 20px;
   font-size: 11px;
   font-weight: 500;
-  background: #1e2336;
-  border: 1px solid #252b40;
-  color: #8892b8;
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  color: var(--text-2);
   cursor: pointer;
   transition: all 0.12s;
 }
-
 .tag-pill:hover { border-color: #4f7ef8; color: #4f7ef8; }
 .tag-pill.active-setup { background: #0f2040; border-color: #4f7ef8; color: #4f7ef8; }
 .tag-pill.active-mistake { background: #2a0f0f; border-color: #ef4444; color: #ef4444; }
@@ -82,7 +106,6 @@ textarea {
   from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: translateY(0); }
 }
-
 .animate-fadeUp { animation: fadeUp 0.25s ease forwards; }
 .cal-day { transition: transform 0.1s; }
 .cal-day:hover { transform: scale(1.04); }
