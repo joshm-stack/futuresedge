@@ -3,16 +3,13 @@ import JournalClient from './JournalClient';
 
 export default async function JournalPage() {
   const supabase = createServerSupabaseClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { session } } = await supabase.auth.getSession();
 
-  const { data: trades } = await supabase
-    .from('trades').select('*')
-    .eq('user_id', user!.id)
-    .order('date', { ascending: false });
+  const { data: entries } = await supabase
+    .from('journal_entries')
+    .select('*')
+    .eq('user_id', session!.user.id)
+    .order('created_at', { ascending: false });
 
-  const { data: accounts } = await supabase
-    .from('accounts').select('*')
-    .eq('user_id', user!.id);
-
-  return <JournalClient trades={trades || []} accounts={accounts || []} userId={user!.id} />;
+  return <JournalClient entries={entries || []} userId={session!.user.id} />;
 }
