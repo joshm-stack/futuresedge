@@ -672,10 +672,4 @@ Return ONLY the affirmation text, nothing else.`
     </div>
   );
 
-  function handlePhotoFile(file: File) {
-    setPhotoFile(file);
-    const reader = new FileReader();
-    reader.onload = e => setPhotoPreview(e.target?.result as string);
-    reader.readAsDataURL(file);
-  }
-}
+
