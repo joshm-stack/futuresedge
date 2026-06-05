@@ -41,8 +41,7 @@ export default function AuthPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4" style={{ background: 'radial-gradient(ellipse at 50% 0%, #0f1535 0%, #0c0e14 70%)' }}>
-      <div className="w-full max-w-sm">
+<div className="min-h-screen flex items-center justify-center px-4" style={{ background: 'var(--bg)' }}>      <div className="w-full max-w-sm">
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-2 mb-3">
             <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ background: '#4f7ef8' }}>
