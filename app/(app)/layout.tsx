@@ -11,6 +11,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <div className="flex h-screen overflow-hidden" style={{ background: 'var(--bg)' }}>
       <Sidebar email={session.user.email} />
       <main className="flex-1 overflow-y-auto" style={{ background: 'var(--bg)' }}>
+        {/* Mobile top padding so content doesn't hide behind top bar */}
+        <div className="md:hidden" style={{ height: 56 }} />
         {children}
       </main>
     </div>
