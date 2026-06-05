@@ -38,8 +38,7 @@ export default function NotebookClient({ entries: initial, userId }: Props) {
       }
       const { data } = await supabase.from('notebook_entries').select('*').eq('user_id', userId).order('updated_at', { ascending: false });
       setEntries(data || []);
-      setIsNew(false);
-      setSelected(null);
+      setIsNew(false); setSelected(null);
     } catch { toast.error('Failed to save'); }
     finally { setSaving(false); }
   }
@@ -48,51 +47,48 @@ export default function NotebookClient({ entries: initial, userId }: Props) {
     if (!confirm('Delete this note?')) return;
     await supabase.from('notebook_entries').delete().eq('id', id);
     setEntries(e => e.filter(x => x.id !== id));
-    setIsNew(false);
-    setSelected(null);
+    setIsNew(false); setSelected(null);
     toast.success('Deleted');
   }
 
   return (
     <div className="p-6 max-w-4xl">
-      <div className="flex items-center justify-between mb-5">
+      <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-semibold" style={{ color: '#e2e8ff' }}>Notebook</h1>
-          <p className="text-sm mt-0.5" style={{ color: '#8892b8' }}>Journal thoughts, setups, and trading lessons</p>
+          <h1 className="text-[22px] font-semibold" style={{ color: 'var(--text)' }}>Notebook</h1>
+          <p className="text-sm mt-0.5" style={{ color: 'var(--text-2)' }}>Journal thoughts, setups, and trading lessons</p>
         </div>
-        <button onClick={openNew} className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-[13px] font-medium text-white"
-          style={{ background: '#4f7ef8', border: 'none', cursor: 'pointer' }}>
+        <button onClick={openNew} className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-[13px] font-semibold text-white"
+          style={{ background: '#4f7ef8', border: 'none', cursor: 'pointer', boxShadow: '0 2px 8px rgba(79,126,248,0.3)' }}>
           <Plus size={14} /> New Note
         </button>
       </div>
 
-      <div className="flex items-center gap-2 px-3 py-2 rounded-lg mb-5" style={{ background: '#12151f', border: '1px solid #252b40' }}>
-        <Search size={13} style={{ color: '#4a5270' }} />
+      <div className="flex items-center gap-2 px-3 py-2 rounded-xl mb-5 card">
+        <Search size={13} style={{ color: 'var(--text-3)' }} />
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search notes…"
-          className="bg-transparent border-none outline-none text-[13px] w-full p-0" style={{ color: '#e2e8ff' }} />
+          className="bg-transparent border-none outline-none text-[13px] w-full p-0" style={{ color: 'var(--text)' }} />
       </div>
 
       {filtered.length === 0 && !isNew ? (
-        <div className="rounded-xl p-12 text-center" style={{ background: '#12151f', border: '1px solid #252b40' }}>
-          <FileText size={36} className="mx-auto mb-3" style={{ color: '#4a5270' }} />
-          <p style={{ color: '#8892b8' }}>No notes yet. Write your first trading journal entry.</p>
+        <div className="rounded-2xl p-12 text-center card">
+          <FileText size={36} className="mx-auto mb-3" style={{ color: 'var(--text-3)' }} />
+          <p style={{ color: 'var(--text-2)' }}>No notes yet. Write your first trading journal entry.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map(e => (
-            <div key={e.id} onClick={() => openEntry(e)} className="rounded-xl p-4 cursor-pointer"
-              style={{ background: '#12151f', border: '1px solid #252b40' }}
-              onMouseEnter={el => (el.currentTarget.style.borderColor = '#313856')}
-              onMouseLeave={el => (el.currentTarget.style.borderColor = '#252b40')}>
-              <h3 className="text-[14px] font-semibold mb-1 truncate" style={{ color: '#e2e8ff' }}>{e.title}</h3>
-              <p className="text-[12px] mb-2" style={{ color: '#8892b8', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+            <div key={e.id} onClick={() => openEntry(e)} className="rounded-xl p-4 cursor-pointer card"
+              style={{ transition: 'box-shadow 0.2s' }}>
+              <h3 className="text-[14px] font-semibold mb-1 truncate" style={{ color: 'var(--text)' }}>{e.title}</h3>
+              <p className="text-[12px] mb-2" style={{ color: 'var(--text-2)', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
                 {e.content || 'Empty note…'}
               </p>
               <div className="flex items-center justify-between">
                 <div className="flex flex-wrap gap-1">
-                  {e.tags.slice(0, 2).map(t => <span key={t} className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: '#1e2336', color: '#8892b8' }}>{t}</span>)}
+                  {e.tags.slice(0, 2).map(t => <span key={t} className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(79,126,248,0.1)', color: '#4f7ef8' }}>{t}</span>)}
                 </div>
-                <span className="text-[10px]" style={{ color: '#4a5270' }}>{new Date(e.updated_at).toLocaleDateString()}</span>
+                <span className="text-[10px]" style={{ color: 'var(--text-3)' }}>{new Date(e.updated_at).toLocaleDateString()}</span>
               </div>
             </div>
           ))}
@@ -100,12 +96,12 @@ export default function NotebookClient({ entries: initial, userId }: Props) {
       )}
 
       {isNew && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.75)' }}>
-          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-xl" style={{ background: '#12151f', border: '1px solid #313856' }}>
-            <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid #252b40' }}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)' }}>
+          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-md)' }}>
+            <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
               <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Note title…"
-                className="text-[16px] font-semibold bg-transparent border-none outline-none flex-1 p-0" style={{ color: '#e2e8ff' }} />
-              <button onClick={() => setIsNew(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8892b8', marginLeft: 12 }}><X size={16} /></button>
+                className="text-[16px] font-semibold bg-transparent border-none outline-none flex-1 p-0" style={{ color: 'var(--text)' }} />
+              <button onClick={() => setIsNew(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', marginLeft: 12 }}><X size={16} /></button>
             </div>
             <div className="p-6">
               <textarea value={content} onChange={e => setContent(e.target.value)}
@@ -115,15 +111,15 @@ export default function NotebookClient({ entries: initial, userId }: Props) {
                 <input value={tags} onChange={e => setTags(e.target.value)} placeholder="Tags (comma-separated)…" />
               </div>
             </div>
-            <div className="flex items-center justify-between px-6 py-4" style={{ borderTop: '1px solid #252b40' }}>
+            <div className="flex items-center justify-between px-6 py-4" style={{ borderTop: '1px solid var(--border)' }}>
               <div>{selected && <button onClick={() => del(selected.id)}
-                style={{ background: '#2a0f0f', border: '1px solid #b91c1c', color: '#ef4444', padding: '8px 12px', borderRadius: 8, cursor: 'pointer', fontSize: 13 }}>
+                style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', color: '#ef4444', padding: '8px 12px', borderRadius: 8, cursor: 'pointer', fontSize: 13 }}>
                 <Trash2 size={12} style={{ display: 'inline', marginRight: 4 }} />Delete</button>}</div>
               <div className="flex gap-2">
                 <button onClick={() => setIsNew(false)}
-                  style={{ background: 'transparent', border: '1px solid #252b40', color: '#8892b8', padding: '9px 16px', borderRadius: 8, cursor: 'pointer', fontSize: 13 }}>Cancel</button>
+                  style={{ background: 'var(--bg-hover)', border: '1px solid var(--border)', color: 'var(--text-2)', padding: '9px 16px', borderRadius: 10, cursor: 'pointer', fontSize: 13 }}>Cancel</button>
                 <button onClick={save} disabled={saving}
-                  style={{ background: '#4f7ef8', border: 'none', color: '#fff', padding: '9px 20px', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 500, opacity: saving ? 0.7 : 1 }}>
+                  style={{ background: '#4f7ef8', border: 'none', color: '#fff', padding: '9px 20px', borderRadius: 10, cursor: 'pointer', fontSize: 13, fontWeight: 600, opacity: saving ? 0.7 : 1 }}>
                   {saving ? 'Saving…' : 'Save Note'}
                 </button>
               </div>
