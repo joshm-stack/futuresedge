@@ -90,28 +90,28 @@ export default function VisionClient({ userId, initialGoals, initialPhotos, save
   const fetchScripture = useCallback(async () => {
     setLoadingScripture(true);
     try {
-      const references = [
-        'psalms+23', 'proverbs+3', 'philippians+4', 'jeremiah+29',
-        'romans+8', 'joshua+1', 'isaiah+40', 'matthew+6', 'ephesians+3',
-        'proverbs+16', 'isaiah+41', 'matthew+7', 'luke+6', 'colossians+3',
-        'proverbs+13', '2+timothy+1', 'numbers+6', 'psalm+27', 'psalm+55',
-        'john+3', 'john+14', 'romans+5', 'hebrews+11', 'james+1',
-        '1+corinthians+13', 'galatians+5', 'matthew+19', 'proverbs+31',
-      ];
-      const today = Math.floor(Date.now() / 86400000);
-      const ref = references[today % references.length];
-      const res = await fetch(`https://bible-api.com/${ref}?translation=kjv`);
+      const res = await fetch('/api/scripture', { cache: 'no-store' });
       if (!res.ok) throw new Error('Failed');
       const data = await res.json();
-      const verses = data.verses || [];
-      if (verses.length > 0) {
-        const verse = verses[Math.floor(Math.random() * Math.min(verses.length, 10))];
-        setScripture({ text: verse.text.trim(), reference: `${data.reference} v.${verse.verse}` });
-      }
+      setScripture({ text: data.text, reference: data.reference });
     } catch {
       setScripture({ text: "I can do all things through Christ who strengthens me.", reference: "Philippians 4:13" });
     } finally {
       setLoadingScripture(false);
+    }
+  }, []);
+
+  const generateAffirmation = useCallback(async () => {
+    setLoadingAffirmation(true);
+    try {
+      const res = await fetch('/api/affirmation', { method: 'POST', cache: 'no-store' });
+      if (!res.ok) throw new Error('Failed');
+      const data = await res.json();
+      if (data.affirmation) setAffirmation(data.affirmation);
+    } catch {
+      setAffirmation("God has already written my victory — today I walk in discipline, faith, and purpose to claim everything He promised me.");
+    } finally {
+      setLoadingAffirmation(false);
     }
   }, []);
 
