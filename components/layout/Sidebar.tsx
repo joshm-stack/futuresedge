@@ -130,15 +130,19 @@ export default function Sidebar({ email }: Props) {
       <aside className="hidden md:flex flex-col h-screen sticky top-0"
         style={{ width: 224, background: 'var(--bg-card)', borderRight: '1px solid var(--border)', flexShrink: 0, boxShadow: 'var(--shadow)' }}>
         <div className="flex items-center gap-2.5 px-5 py-5" style={{ borderBottom: '1px solid var(--border)' }}>
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: '#4f7ef8' }}>
-            <TrendingUp size={15} color="white" strokeWidth={2.5} />
-          </div>
-          <span className="font-bold text-[15px]" style={{ color: 'var(--text)' }}>
-            Futures<span style={{ color: '#4f7ef8' }}>Edge</span>
-          </span>
-        </div>
-        <NavContent />
-      </aside>
-    </>
-  );
-}
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+  style={{ background: 'linear-gradient(145deg, #1c3a7a, #0e1e45)', boxShadow: '0 4px 12px rgba(61,127,255,0.3)' }}>
+  <svg width="18" height="18" viewBox="0 0 22 22" fill="none">
+    <defs>
+      <linearGradient id="sideArr" x1="1" y1="17" x2="21" y2="4" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stopColor="#2563eb"/>
+        <stop offset="100%" stopColor="#93c5fd"/>
+      </linearGradient>
+    </defs>
+    <polyline points="1,17 6,11 11,14 17,6 21,4" stroke="url(#sideArr)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+    <polyline points="17,2 21,4 19,8" stroke="url(#sideArr)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+  </svg>
+</div>
+<span className="font-bold text-[15px]" style={{ fontFamily: "'Space Grotesk', sans-serif", letterSpacing: '-0.02em', color: 'var(--text)' }}>
+  Futures<span style={{ background: 'linear-gradient(135deg, #3d7fff, #7ab4ff)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Edge</span>
+</span>
