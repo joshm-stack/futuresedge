@@ -101,18 +101,113 @@ export default function VisionClient({ userId, initialGoals, initialPhotos, save
     }
   }, []);
 
-  const generateAffirmation = useCallback(async () => {
+ const generateAffirmation = useCallback(() => {
+    const AFFIRMATIONS = [
+      "God has already written my victory — today I walk in discipline, faith, and purpose to claim everything He promised me.",
+      "I am a $100K+ a month trader. My consistency, patience, and discipline make it inevitable.",
+      "I trade with clarity, execute with precision, and grow with every single session.",
+      "Rachel is my queen and I am building an empire worthy of the life she deserves.",
+      "God goes before me in every trade I take — I trust His timing and His plan completely.",
+      "I am the provider my family needs. My parents will never worry about money again because of me.",
+      "Every loss is a lesson. Every win is confirmation. I grow in both directions.",
+      "I am disciplined enough to follow my rules and humble enough to learn from my mistakes.",
+      "My dream home is already mine in God's plan — I am simply walking toward it every day.",
+      "I love deeply, give freely, and lead with purpose — in trading and in life.",
+      "I put God first every single morning and everything else falls into perfect order.",
+      "I am building a company my children will be proud to inherit and grow.",
+      "My body is strong, my mind is sharp, and my spirit is unbreakable.",
+      "I will travel the entire world with Rachel and my kids — that is not a dream, it is a plan.",
+      "I retire my mom and dad because they sacrificed everything for me. That is my honor.",
+      "I am not just a trader. I am a legacy builder, a father, a provider, and a man of God.",
+      "My patience in the markets mirrors my patience in life — both produce extraordinary results.",
+      "I give back to people in need because I know what it means to need — and I never forget that.",
+      "Every funded account I pass brings me closer to the financial freedom I am destined for.",
+      "I love myself fully — my flaws, my growth, my journey. I am enough and I am becoming more.",
+      "God did not bring me this far to leave me. My breakthrough is already in motion.",
+      "I am the calm in the chaos. When the market moves, I move with purpose and control.",
+      "Rachel sees the best in me and I wake up every day working to deserve that.",
+      "I execute my trading plan without hesitation and review it without ego.",
+      "Generational wealth flows through me. My children and grandchildren will benefit from my discipline today.",
+      "I am grateful for every opportunity the market gives me — I never take a session for granted.",
+      "My faith is bigger than my fear. I step into every trade knowing God is with me.",
+      "I am the kind of trader who learns from every chart, every session, every result.",
+      "I do not need validation from others. My results speak. My character speaks louder.",
+      "Today I choose discipline over distraction, progress over perfection, and faith over fear.",
+      "I am patient enough to wait for the right setup and confident enough to take it when it comes.",
+      "My morning routine sets the tone for everything — I start with God and I finish strong.",
+      "I build wealth not just for myself but for every person I love and every cause I believe in.",
+      "I am a natural leader. My family, my team, my community — I lead them all with love.",
+      "Every sacrifice I make today compounds into the extraordinary life I am building tomorrow.",
+      "I protect my mental capital as fiercely as my financial capital — both are sacred.",
+      "God's plan for my life is bigger than any trade, any loss, or any bad day.",
+      "I show up every day. I do the work. I trust the process. Results are inevitable.",
+      "I am fully present in every moment — as a trader, as a partner, as a father, as a son.",
+      "The version of me that lives in that dream home, married to Rachel, with my family taken care of — he is who I trade for every single day.",
+      "I have everything I need inside me right now to build the life I envision.",
+      "My wins compound. My lessons compound. My faith compounds. I am unstoppable.",
+      "I do not chase trades. I do not chase money. I let my edge play out and trust the math.",
+      "I am worthy of everything I am working toward — the wealth, the love, the freedom, the legacy.",
+      "God blesses the work of my hands. I work hard, I work smart, and I give the glory to Him.",
+      "I manage risk like a professional and think about reward like an entrepreneur.",
+      "My children will grow up watching a father who never quit, never compromised his values, and always showed up.",
+      "I am at peace with the process. Everything is happening exactly as it should.",
+      "I forgive myself for every mistake I have made in the markets and in life — and I keep moving forward.",
+      "The market does not control my emotions. I control my emotions. I am the variable that matters.",
+      "I wake up every morning with one goal — to be better than I was yesterday in every area of my life.",
+      "My love for Rachel is a force. I protect it, nurture it, and invest in it every single day.",
+      "I am a man of my word. What I commit to, I deliver — to myself, to my family, to God.",
+      "I think in decades, not days. Every small win is a brick in the empire I am building.",
+      "I am not defined by my account balance. I am defined by my character, my faith, and my love.",
+      "My trading edge is real. My process is sound. My discipline is what separates me from the rest.",
+      "I was built for this. The pressure, the uncertainty, the grind — I was made for all of it.",
+      "Every morning I thank God for the gift of another day to pursue my purpose.",
+      "I give more than I take. I love more than I fear. I build more than I consume.",
+      "My intuition in the markets grows sharper every single session. I trust myself.",
+      "I am a good man. A great partner. A present father. A faithful son. And I am getting better every day.",
+      "My company will create jobs, change lives, and leave a mark long after I am gone.",
+      "I do not let a losing trade become a losing day, or a losing day become a losing week.",
+      "God's grace covers every mistake I have ever made. I walk in that grace with confidence.",
+      "I attract abundance in every form — financial, spiritual, relational, physical.",
+      "I am consistent when no one is watching. That is why I win when everyone is watching.",
+      "Rachel and I are building something beautiful together — a family, a life, a legacy.",
+      "My parents sacrificed their best years for me. I will give them their best years back.",
+      "I see opportunities where others see obstacles. That is the trader's mindset I have developed.",
+      "I am not in competition with anyone. I am in competition with who I was yesterday.",
+      "Every trade I take is a reflection of my preparation, my patience, and my process.",
+      "God has given me the wisdom to read the markets and the character to handle the results.",
+      "I am deeply loved, powerfully supported, and divinely guided in everything I do.",
+      "My financial freedom is not just for me — it is for everyone in my circle who needs it.",
+      "I dream big because I serve a big God. Nothing is impossible for me.",
+      "I cut losses fast and let winners run — in trading and in every area of my life.",
+      "I am the calm, decisive, disciplined trader I set out to become. I am already him.",
+      "Every country I will visit, every experience I will have — it is all paid for by my discipline today.",
+      "I do not need luck. I need preparation, patience, and the courage to execute.",
+      "My relationship with God is the foundation of everything. Without it, nothing else matters.",
+      "I inspire the people around me by simply being committed to my own growth and excellence.",
+      "I am a giver. The more I earn, the more I give — to my family, to my community, to God's work.",
+      "I see the market clearly because I have done the work to understand it deeply.",
+      "My kids will never wonder if their father loved them. They will feel it in everything I do.",
+      "I am mentally tough. I absorb pressure, process it, and come out stronger on the other side.",
+      "Today's discipline is tomorrow's freedom. I make the hard choice every single time.",
+      "I believe in myself with the same certainty that God believes in me — completely.",
+      "I attract the right opportunities, the right people, and the right moments at the right time.",
+      "My story is not finished. The best chapters are still being written.",
+      "I trade to live, not live to trade. My life is rich in every way that matters.",
+      "I am exactly who God designed me to be — and I am walking boldly into everything He prepared for me.",
+      "The markets will always have uncertainty. My response to it will always be certain — calm, focused, disciplined.",
+      "I am a trader, a visionary, a family man, and a man of God. All four, every day, no compromise.",
+      "My legacy is being built right now in every decision I make, every trade I take, every word I speak.",
+      "I do not just survive — I thrive. In the markets, in love, in faith, in life.",
+      "God's best for my life is beyond what I can even imagine — and I am walking toward it every day.",
+      "I am Joshua Torres. I am a man of purpose, a man of faith, and a man who never stops building.",
+    ];
+
     setLoadingAffirmation(true);
-    try {
-      const res = await fetch('/api/affirmation', { method: 'POST', cache: 'no-store' });
-      if (!res.ok) throw new Error('Failed');
-      const data = await res.json();
-      if (data.affirmation) setAffirmation(data.affirmation);
-    } catch {
-      setAffirmation("God has already written my victory — today I walk in discipline, faith, and purpose to claim everything He promised me.");
-    } finally {
+    setTimeout(() => {
+      const random = AFFIRMATIONS[Math.floor(Math.random() * AFFIRMATIONS.length)];
+      setAffirmation(random);
       setLoadingAffirmation(false);
-    }
+    }, 600);
   }, []);
 
   const generateAffirmation = useCallback(async () => {
