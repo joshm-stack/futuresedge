@@ -1,4 +1,5 @@
 import Sidebar from '@/components/layout/Sidebar';
+import LoadingScreen from '@/components/layout/LoadingScreen';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
 import { redirect } from 'next/navigation';
 
@@ -9,9 +10,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: 'var(--bg)' }}>
+      <LoadingScreen />
       <Sidebar email={session.user.email} />
       <main className="flex-1 overflow-y-auto" style={{ background: 'var(--bg)' }}>
-        {/* Mobile top padding so content doesn't hide behind top bar */}
         <div className="md:hidden" style={{ height: 56 }} />
         {children}
       </main>
