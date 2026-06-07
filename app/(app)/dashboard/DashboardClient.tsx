@@ -18,7 +18,7 @@ interface Props {
 }
 
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const DAYS = ['Su','Mo','Tu','We','Th','Fr','Sa'];
 
 function calcEdgeScore(a: Analytics): number {
   if (!a.totalTrades) return 0;
@@ -55,7 +55,6 @@ export default function DashboardClient({ trades, analytics: a, daily, equity }:
   const scoreLabel = getScoreLabel(edgeScore);
   const isProfit = a.totalNetPnl >= 0;
 
-  // Win streak by DAYS
   const dayStreak = useMemo(() => {
     const dailyMap: Record<string, number> = {};
     trades.forEach(t => { dailyMap[t.date] = (dailyMap[t.date] || 0) + t.net_pnl; });
@@ -74,9 +73,9 @@ export default function DashboardClient({ trades, analytics: a, daily, equity }:
   const radarData = [
     { subject: 'Win %', value: Math.min(a.winRate, 100) },
     { subject: 'Consistency', value: Math.min((1 - a.longestLossStreak / Math.max(a.totalTrades, 1)) * 100, 100) },
-    { subject: 'Profit Factor', value: Math.min(a.profitFactor >= 999 ? 100 : a.profitFactor * 20, 100) },
-    { subject: 'Avg Win/Loss', value: Math.min(a.avgRR * 25, 100) },
-    { subject: 'Max Drawdown', value: Math.max(0, 100 - Math.abs(a.worstDay) / Math.max(a.totalNetPnl + 1, 1) * 10) },
+    { subject: 'Prof. Factor', value: Math.min(a.profitFactor >= 999 ? 100 : a.profitFactor * 20, 100) },
+    { subject: 'Avg W/L', value: Math.min(a.avgRR * 25, 100) },
+    { subject: 'Drawdown', value: Math.max(0, 100 - Math.abs(a.worstDay) / Math.max(a.totalNetPnl + 1, 1) * 10) },
     { subject: 'Recovery', value: a.totalNetPnl >= 0 ? 80 : 30 },
   ];
 
@@ -100,29 +99,24 @@ export default function DashboardClient({ trades, analytics: a, daily, equity }:
   const monthPnl = Object.values(dayMap).reduce((a, d) => a + d.pnl, 0);
   const tradingDays = Object.keys(dayMap).length;
 
-  // Build weeks with date ranges
   const weeks = useMemo(() => {
-    const result: { pnl: number; days: number; label: string }[] = [];
-    let current = { pnl: 0, days: 0 };
+    const result: { pnl: number; label: string }[] = [];
+    let current = { pnl: 0 };
     let col = firstDay;
     let weekIdx = 0;
-
     const getRange = (wIdx: number) => {
       const startOffset = wIdx * 7 - firstDay;
-      const startDay = Math.max(1, startOffset + 1);
-      const endDay = Math.min(daysInMonth, startOffset + 7);
-      const startDate = new Date(calYear, calMonth, startDay);
-      const endDate = new Date(calYear, calMonth, endDay);
+      const s = new Date(calYear, calMonth, Math.max(1, startOffset + 1));
+      const e = new Date(calYear, calMonth, Math.min(daysInMonth, startOffset + 7));
       const fmt = (d: Date) => `${d.getMonth() + 1}/${d.getDate()}`;
-      return `${fmt(startDate)}-${fmt(endDate)}`;
+      return `${fmt(s)}-${fmt(e)}`;
     };
-
     for (let d = 1; d <= daysInMonth; d++) {
-      if (dayMap[d]) { current.pnl += dayMap[d].pnl; current.days++; }
+      if (dayMap[d]) current.pnl += dayMap[d].pnl;
       col++;
       if (col === 7 || d === daysInMonth) {
         result.push({ ...current, label: getRange(weekIdx) });
-        current = { pnl: 0, days: 0 };
+        current = { pnl: 0 };
         col = 0;
         weekIdx++;
       }
@@ -133,7 +127,7 @@ export default function DashboardClient({ trades, analytics: a, daily, equity }:
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (!active || !payload?.length) return null;
     return (
-      <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 12px', fontSize: 12, color: 'var(--text)', boxShadow: 'var(--shadow)' }}>
+      <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 12px', fontSize: 12, color: 'var(--text)' }}>
         <p style={{ color: 'var(--text-2)', marginBottom: 4 }}>{label}</p>
         <p style={{ color: isProfit ? '#22c55e' : '#ef4444' }}>Equity: {fmtCurrency(payload[0]?.value)}</p>
       </div>
@@ -141,238 +135,202 @@ export default function DashboardClient({ trades, analytics: a, daily, equity }:
   };
 
   const avgWinLossDisplay = a.losses === 0 ? (a.avgWin > 0 ? fmtCurrency(a.avgWin) : '—') : a.avgRR.toFixed(2);
-  const avgWinLossSub = a.losses === 0 ? 'No losses yet' : `${fmtCurrency(a.avgWin)} / ${fmtCurrency(a.avgLoss)}`;
   const profitFactorDisplay = a.profitFactor >= 999 ? '∞' : a.profitFactor.toFixed(2);
   const profitFactorColor = a.losses === 0 ? '#22c55e' : a.profitFactor >= 1 ? '#22c55e' : '#ef4444';
 
   return (
-    <div className="p-5 max-w-[1600px]" style={{ minHeight: '100vh' }}>
+    <div style={{ minHeight: '100vh', padding: '16px' }}>
       {/* Header */}
-      <div className="flex items-center justify-between mb-5">
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
         <div>
-          <h1 className="text-[22px] font-semibold" style={{ color: 'var(--text)' }}>Dashboard</h1>
-          <p className="text-[12px] mt-0.5" style={{ color: 'var(--text-2)' }}>{trades.length} total trades</p>
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)', margin: 0 }}>Dashboard</h1>
+          <p style={{ fontSize: 12, color: 'var(--text-2)', margin: 0 }}>{trades.length} total trades</p>
         </div>
-        <Link href="/import" className="flex items-center gap-2 px-4 py-2 rounded-xl text-[13px] font-semibold text-white"
-          style={{ background: '#4f7ef8', boxShadow: '0 2px 8px rgba(79,126,248,0.3)' }}>
-          + Import Trades
+        <Link href="/import" style={{ background: '#4f7ef8', color: '#fff', padding: '8px 16px', borderRadius: 12, fontSize: 13, fontWeight: 700, textDecoration: 'none', boxShadow: '0 2px 8px rgba(79,126,248,0.3)' }}>
+          + Import
         </Link>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-5">
+      {/* Stats grid - 2 cols on mobile */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8, marginBottom: 16 }}>
         {[
           { label: 'Net P&L', value: fmtCurrency(a.totalNetPnl, true), color: a.totalNetPnl >= 0 ? '#22c55e' : '#ef4444', sub: `${a.totalTrades} trades` },
-          { label: 'Trade Win %', value: fmtPercent(a.winRate), color: a.winRate >= 50 ? '#22c55e' : '#ef4444', sub: `${a.wins}W · ${a.losses}L` },
-          { label: a.losses === 0 ? 'Avg Win' : 'Avg Win/Loss', value: avgWinLossDisplay, color: '#22c55e', sub: avgWinLossSub },
-          { label: 'Profit Factor', value: profitFactorDisplay, color: profitFactorColor, sub: a.losses === 0 ? 'No losses yet' : 'Gross W/L ratio' },
+          { label: 'Win %', value: fmtPercent(a.winRate), color: a.winRate >= 50 ? '#22c55e' : '#ef4444', sub: `${a.wins}W · ${a.losses}L` },
+          { label: a.losses === 0 ? 'Avg Win' : 'Avg W/L', value: avgWinLossDisplay, color: '#22c55e', sub: a.losses === 0 ? 'No losses yet' : 'ratio' },
+          { label: 'Profit Factor', value: profitFactorDisplay, color: profitFactorColor, sub: a.losses === 0 ? 'No losses yet' : 'W/L ratio' },
           { label: 'Day Streak', value: dayStreak.type ? `${dayStreak.count} ${dayStreak.type}` : '—', color: dayStreak.type === 'W' ? '#22c55e' : dayStreak.type === 'L' ? '#ef4444' : 'var(--text-2)', sub: 'consecutive days' },
         ].map(s => (
-          <div key={s.label} className="rounded-xl p-4 card">
-            <p className="text-[11px] font-semibold mb-2" style={{ color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{s.label}</p>
-            <p className="text-[22px] font-bold leading-none mb-1" style={{ color: s.color }}>{s.value}</p>
-            <p className="text-[11px]" style={{ color: 'var(--text-3)' }}>{s.sub}</p>
+          <div key={s.label} className="card" style={{ padding: '12px 14px', borderRadius: 14 }}>
+            <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 6px 0' }}>{s.label}</p>
+            <p style={{ fontSize: 20, fontWeight: 800, color: s.color, margin: '0 0 4px 0', lineHeight: 1 }}>{s.value}</p>
+            <p style={{ fontSize: 10, color: 'var(--text-3)', margin: 0 }}>{s.sub}</p>
           </div>
         ))}
       </div>
 
-      {/* Main */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 mb-4">
-        <div className="xl:col-span-1 space-y-4">
-          {/* Equity */}
-          <div className="rounded-xl p-5 card">
-            <p className="text-[11px] font-semibold mb-4" style={{ color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Daily Net Cumulative P&L</p>
-            {equity.length > 0 ? (
-              <ResponsiveContainer width="100%" height={180}>
-                <AreaChart data={equity} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="eqGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={isProfit ? '#22c55e' : '#ef4444'} stopOpacity={0.2} />
-                      <stop offset="95%" stopColor={isProfit ? '#22c55e' : '#ef4444'} stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                  <XAxis dataKey="date" tick={{ fill: 'var(--text-3)', fontSize: 10 }} tickLine={false} axisLine={false} />
-                  <YAxis tick={{ fill: 'var(--text-3)', fontSize: 10 }} tickLine={false} axisLine={false} tickFormatter={v => '$' + v.toLocaleString()} />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Area type="monotone" dataKey="equity" stroke={isProfit ? '#22c55e' : '#ef4444'} strokeWidth={2} fill="url(#eqGrad)" dot={false} activeDot={{ r: 4 }} />
-                </AreaChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="flex items-center justify-center h-[180px]" style={{ color: 'var(--text-3)' }}>No trades yet</div>
-            )}
-          </div>
+      {/* Equity Chart */}
+      <div className="card" style={{ padding: 16, borderRadius: 16, marginBottom: 12 }}>
+        <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 12px 0' }}>Cumulative P&L</p>
+        {equity.length > 0 ? (
+          <ResponsiveContainer width="100%" height={160}>
+            <AreaChart data={equity} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+              <defs>
+                <linearGradient id="eqGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={isProfit ? '#22c55e' : '#ef4444'} stopOpacity={0.2} />
+                  <stop offset="95%" stopColor={isProfit ? '#22c55e' : '#ef4444'} stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+              <XAxis dataKey="date" tick={{ fill: 'var(--text-3)', fontSize: 9 }} tickLine={false} axisLine={false} />
+              <YAxis tick={{ fill: 'var(--text-3)', fontSize: 9 }} tickLine={false} axisLine={false} tickFormatter={v => '$' + v.toLocaleString()} />
+              <Tooltip content={<CustomTooltip />} />
+              <Area type="monotone" dataKey="equity" stroke={isProfit ? '#22c55e' : '#ef4444'} strokeWidth={2} fill="url(#eqGrad)" dot={false} activeDot={{ r: 4 }} />
+            </AreaChart>
+          </ResponsiveContainer>
+        ) : (
+          <div style={{ height: 160, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-3)' }}>No trades yet</div>
+        )}
+      </div>
 
-          {/* Edge Score */}
-          <div className="rounded-xl p-5 card">
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-[11px] font-semibold" style={{ color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Edge Score</p>
-              <div className="flex items-center gap-1.5">
-                <span className="text-[22px] font-bold" style={{ color: scoreColor }}>{edgeScore}</span>
-                <span className="text-[11px] px-2 py-0.5 rounded-full font-semibold" style={{ background: `${scoreColor}20`, color: scoreColor }}>{scoreLabel}</span>
-              </div>
-            </div>
-            <ResponsiveContainer width="100%" height={200}>
-              <RadarChart data={radarData}>
-                <PolarGrid stroke="var(--border)" />
-                <PolarAngleAxis dataKey="subject" tick={{ fill: 'var(--text-2)', fontSize: 10 }} />
-                <PolarRadiusAxis domain={[0, 100]} tick={false} axisLine={false} />
-                <Radar name="Edge" dataKey="value" stroke={scoreColor} fill={scoreColor} fillOpacity={0.15} strokeWidth={2} />
-              </RadarChart>
-            </ResponsiveContainer>
-            <div className="mt-2">
-              <div className="flex justify-between text-[10px] mb-1" style={{ color: 'var(--text-3)' }}>
-                <span>0</span><span>25</span><span>50</span><span>75</span><span>100</span>
-              </div>
-              <div className="h-2 rounded-full overflow-hidden" style={{ background: 'var(--bg-hover)' }}>
-                <div className="h-full rounded-full" style={{ width: `${edgeScore}%`, background: 'linear-gradient(to right, #ef4444, #f59e0b, #22c55e)' }} />
-              </div>
-              <p className="text-[10px] mt-1.5 text-center" style={{ color: 'var(--text-3)' }}>
-                Based on win rate, consistency, profit factor, R:R, drawdown & recovery
-              </p>
-            </div>
+      {/* Edge Score */}
+      <div className="card" style={{ padding: 16, borderRadius: 16, marginBottom: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+          <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', margin: 0 }}>Edge Score</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 24, fontWeight: 800, color: scoreColor }}>{edgeScore}</span>
+            <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: `${scoreColor}20`, color: scoreColor }}>{scoreLabel}</span>
           </div>
         </div>
-
-        {/* Calendar */}
-        <div className="xl:col-span-2">
-          <div className="rounded-xl p-5 card h-full">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <button onClick={() => { if (calMonth === 0) { setCalMonth(11); setCalYear(y => y - 1); } else setCalMonth(m => m - 1); }}
-                  style={{ background: 'var(--bg-hover)', border: '1px solid var(--border)', color: 'var(--text-2)', padding: '4px 8px', borderRadius: 6, cursor: 'pointer' }}>
-                  <ChevronLeft size={14} />
-                </button>
-                <span className="text-[14px] font-semibold" style={{ color: 'var(--text)' }}>{MONTHS[calMonth]} {calYear}</span>
-                <button onClick={() => { if (calMonth === 11) { setCalMonth(0); setCalYear(y => y + 1); } else setCalMonth(m => m + 1); }}
-                  style={{ background: 'var(--bg-hover)', border: '1px solid var(--border)', color: 'var(--text-2)', padding: '4px 8px', borderRadius: 6, cursor: 'pointer' }}>
-                  <ChevronRight size={14} />
-                </button>
-              </div>
-              <div className="flex gap-4 text-[12px]">
-                <span style={{ color: monthPnl >= 0 ? '#22c55e' : '#ef4444' }}>{fmtCurrency(monthPnl, true)}</span>
-                <span style={{ color: 'var(--text-3)' }}>{tradingDays} {tradingDays === 1 ? 'day' : 'days'}</span>
-              </div>
-            </div>
-
-            <div className="flex gap-2">
-              <div className="flex-1">
-                <div className="grid grid-cols-7 gap-1 mb-1">
-                  {DAYS.map(d => <div key={d} className="text-center text-[10px] font-semibold py-1" style={{ color: 'var(--text-3)' }}>{d}</div>)}
-                </div>
-                <div className="grid grid-cols-7 gap-1">
-                  {Array.from({ length: firstDay }, (_, i) => <div key={`e-${i}`} />)}
-                  {Array.from({ length: daysInMonth }, (_, i) => {
-                    const d = i + 1;
-                    const data = dayMap[d];
-                    const isToday = today.getDate() === d && today.getMonth() === calMonth && today.getFullYear() === calYear;
-                    const pnl = data?.pnl ?? 0;
-                    let bg = 'transparent';
-                    let pnlColor = 'var(--text-3)';
-                    let border = 'var(--border)';
-                    if (data) {
-                      if (pnl > 0) { bg = 'rgba(34,197,94,0.08)'; pnlColor = '#22c55e'; border = 'rgba(34,197,94,0.2)'; }
-                      else if (pnl < 0) { bg = 'rgba(239,68,68,0.08)'; pnlColor = '#ef4444'; border = 'rgba(239,68,68,0.2)'; }
-                      else { bg = 'var(--bg-hover)'; }
-                    }
-                    return (
-                      <div key={d} className="rounded-lg p-1 relative flex flex-col"
-                        style={{ background: bg, border: `1px solid ${isToday ? '#4f7ef8' : border}`, minHeight: 56, cursor: data ? 'pointer' : 'default' }}>
-                        <span className="text-[9px] font-medium" style={{ color: 'var(--text-3)' }}>{d}</span>
-                        {data && (
-                          <div className="flex flex-col items-center justify-center flex-1 gap-0.5">
-                            <span className="text-[8px]" style={{ color: 'var(--text-3)' }}>
-                              {data.count} {data.count === 1 ? 'Trade' : 'Trades'}
-                            </span>
-                            <span className="text-[9px] font-bold leading-none" style={{ color: pnlColor }}>
-                              {fmtCurrency(pnl, true)}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Weekly totals */}
-              <div className="flex flex-col gap-1" style={{ width: 76 }}>
-                <div className="text-[9px] font-semibold py-1 text-center" style={{ color: 'var(--text-3)' }}>Weekly</div>
-                {weeks.map((w, i) => (
-                  <div key={i} className="rounded-lg flex flex-col items-center justify-center px-1"
-                    style={{ minHeight: 56, background: w.pnl > 0 ? 'rgba(34,197,94,0.08)' : w.pnl < 0 ? 'rgba(239,68,68,0.08)' : 'transparent', border: '1px solid var(--border)' }}>
-                    <span className="text-[8px] font-medium text-center leading-tight mb-0.5" style={{ color: 'var(--text-3)' }}>{w.label}</span>
-                    <span className="text-[9px] font-bold" style={{ color: w.pnl > 0 ? '#22c55e' : w.pnl < 0 ? '#ef4444' : 'var(--text-3)' }}>
-                      {w.pnl !== 0 ? fmtCurrency(w.pnl, true) : '—'}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+        <ResponsiveContainer width="100%" height={180}>
+          <RadarChart data={radarData}>
+            <PolarGrid stroke="var(--border)" />
+            <PolarAngleAxis dataKey="subject" tick={{ fill: 'var(--text-2)', fontSize: 9 }} />
+            <PolarRadiusAxis domain={[0, 100]} tick={false} axisLine={false} />
+            <Radar name="Edge" dataKey="value" stroke={scoreColor} fill={scoreColor} fillOpacity={0.15} strokeWidth={2} />
+          </RadarChart>
+        </ResponsiveContainer>
+        <div style={{ height: 6, borderRadius: 3, background: 'var(--bg-hover)', overflow: 'hidden', marginTop: 4 }}>
+          <div style={{ height: '100%', width: `${edgeScore}%`, background: 'linear-gradient(to right, #ef4444, #f59e0b, #22c55e)', borderRadius: 3 }} />
         </div>
       </div>
 
+      {/* Calendar */}
+      <div className="card" style={{ padding: 16, borderRadius: 16, marginBottom: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button onClick={() => { if (calMonth === 0) { setCalMonth(11); setCalYear(y => y - 1); } else setCalMonth(m => m - 1); }}
+              style={{ background: 'var(--bg-hover)', border: '1px solid var(--border)', color: 'var(--text-2)', padding: '4px 8px', borderRadius: 6, cursor: 'pointer' }}>
+              <ChevronLeft size={14} />
+            </button>
+            <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{MONTHS[calMonth]} {calYear}</span>
+            <button onClick={() => { if (calMonth === 11) { setCalMonth(0); setCalYear(y => y + 1); } else setCalMonth(m => m + 1); }}
+              style={{ background: 'var(--bg-hover)', border: '1px solid var(--border)', color: 'var(--text-2)', padding: '4px 8px', borderRadius: 6, cursor: 'pointer' }}>
+              <ChevronRight size={14} />
+            </button>
+          </div>
+          <div style={{ display: 'flex', gap: 12, fontSize: 12 }}>
+            <span style={{ color: monthPnl >= 0 ? '#22c55e' : '#ef4444', fontWeight: 700 }}>{fmtCurrency(monthPnl, true)}</span>
+            <span style={{ color: 'var(--text-3)' }}>{tradingDays}d</span>
+          </div>
+        </div>
+
+        {/* Day headers */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2, marginBottom: 2 }}>
+          {DAYS.map(d => (
+            <div key={d} style={{ textAlign: 'center', fontSize: 9, fontWeight: 700, color: 'var(--text-3)', padding: '2px 0' }}>{d}</div>
+          ))}
+        </div>
+
+        {/* Calendar cells - mobile optimized, no weekly column */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2 }}>
+          {Array.from({ length: firstDay }, (_, i) => <div key={`e-${i}`} />)}
+          {Array.from({ length: daysInMonth }, (_, i) => {
+            const d = i + 1;
+            const data = dayMap[d];
+            const isToday = today.getDate() === d && today.getMonth() === calMonth && today.getFullYear() === calYear;
+            const pnl = data?.pnl ?? 0;
+            let bg = 'transparent', pnlColor = 'var(--text-3)', border = '1px solid var(--border)';
+            if (data) {
+              if (pnl > 0) { bg = 'rgba(34,197,94,0.1)'; pnlColor = '#22c55e'; border = '1px solid rgba(34,197,94,0.25)'; }
+              else if (pnl < 0) { bg = 'rgba(239,68,68,0.1)'; pnlColor = '#ef4444'; border = '1px solid rgba(239,68,68,0.25)'; }
+              else { bg = 'var(--bg-hover)'; }
+            }
+            if (isToday) border = '1px solid #4f7ef8';
+            return (
+              <div key={d} style={{ background: bg, border, borderRadius: 8, aspectRatio: '1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 2, minHeight: 40 }}>
+                <span style={{ fontSize: 8, color: 'var(--text-3)', lineHeight: 1 }}>{d}</span>
+                {data && (
+                  <>
+                    <span style={{ fontSize: 7, color: 'var(--text-3)', lineHeight: 1 }}>{data.count}T</span>
+                    <span style={{ fontSize: 7, fontWeight: 700, color: pnlColor, lineHeight: 1, textAlign: 'center' }}>
+                      {pnl >= 0 ? '+' : ''}${Math.abs(pnl) >= 1000 ? `${(Math.abs(pnl) / 1000).toFixed(1)}k` : Math.abs(pnl).toFixed(0)}
+                    </span>
+                  </>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Weekly totals - shown below on mobile */}
+        {weeks.some(w => w.pnl !== 0) && (
+          <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
+            <p style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Weekly Summary</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {weeks.filter(w => w.pnl !== 0).map((w, i) => (
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 10px', borderRadius: 8, background: w.pnl > 0 ? 'rgba(34,197,94,0.08)' : 'rgba(239,68,68,0.08)' }}>
+                  <span style={{ fontSize: 11, color: 'var(--text-2)' }}>{w.label}</span>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: w.pnl > 0 ? '#22c55e' : '#ef4444' }}>{fmtCurrency(w.pnl, true)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Recent Trades */}
-      <div className="rounded-xl card">
-        <div className="flex items-center gap-4 px-5 py-3" style={{ borderBottom: '1px solid var(--border)' }}>
+      <div className="card" style={{ borderRadius: 16, overflow: 'hidden' }}>
+        <div style={{ display: 'flex', gap: 20, padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>
           {(['recent', 'open'] as const).map(tab => (
             <button key={tab} onClick={() => setActiveTab(tab)}
-              className="text-[13px] font-semibold pb-1 transition-colors"
-              style={{ color: activeTab === tab ? 'var(--text)' : 'var(--text-3)', borderBottom: activeTab === tab ? '2px solid #4f7ef8' : '2px solid transparent', background: 'none', border: 'none', cursor: 'pointer', paddingBottom: 4, borderBottomWidth: 2, borderBottomStyle: 'solid', borderBottomColor: activeTab === tab ? '#4f7ef8' : 'transparent' }}>
+              style={{ fontSize: 13, fontWeight: 700, color: activeTab === tab ? 'var(--text)' : 'var(--text-3)', background: 'none', border: 'none', cursor: 'pointer', paddingBottom: 4, borderBottom: activeTab === tab ? '2px solid #4f7ef8' : '2px solid transparent' }}>
               {tab === 'recent' ? 'Recent Trades' : 'Open Positions'}
             </button>
           ))}
         </div>
-        <div className="p-5">
+        <div style={{ padding: 16 }}>
           {activeTab === 'recent' && (
             trades.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="mb-2" style={{ color: 'var(--text-2)' }}>No trades yet</p>
+              <div style={{ textAlign: 'center', padding: '32px 0' }}>
+                <p style={{ color: 'var(--text-2)', marginBottom: 8 }}>No trades yet</p>
                 <Link href="/import" style={{ color: '#4f7ef8', fontSize: 13 }}>Import your first trades →</Link>
               </div>
             ) : (
-              <table className="w-full">
-                <thead>
-                  <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                    {['Date','Contract','Direction','Session','Entry','Exit','Net P&L','Result'].map(h => (
-                      <th key={h} className="text-left pb-2 text-[11px] font-semibold" style={{ color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {trades.slice(0, 8).map(trade => (
-                    <tr key={trade.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                      <td className="py-2.5 text-[13px]" style={{ color: 'var(--text-2)' }}>{trade.date}</td>
-                      <td className="py-2.5 text-[13px] font-semibold" style={{ color: 'var(--text)' }}>{trade.contract}</td>
-                      <td className="py-2.5">
-                        <span className="text-[11px] px-2 py-0.5 rounded-full font-semibold"
-                          style={{ background: trade.direction === 'Long' ? 'rgba(79,126,248,0.1)' : 'rgba(245,158,11,0.1)', color: trade.direction === 'Long' ? '#4f7ef8' : '#f59e0b' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {trades.slice(0, 6).map(trade => (
+                  <div key={trade.id} style={{ padding: '12px 14px', borderRadius: 12, background: 'var(--bg-hover)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                        <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>{trade.contract}</span>
+                        <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: trade.direction === 'Long' ? 'rgba(79,126,248,0.1)' : 'rgba(245,158,11,0.1)', color: trade.direction === 'Long' ? '#4f7ef8' : '#f59e0b' }}>
                           {trade.direction}
                         </span>
-                      </td>
-                      <td className="py-2.5 text-[13px]" style={{ color: 'var(--text-2)' }}>{trade.session}</td>
-                      <td className="py-2.5 text-[13px] font-mono" style={{ color: 'var(--text-2)' }}>{trade.entry_price}</td>
-                      <td className="py-2.5 text-[13px] font-mono" style={{ color: 'var(--text-2)' }}>{trade.exit_price}</td>
-                      <td className="py-2.5 text-[13px] font-bold" style={{ color: trade.net_pnl >= 0 ? '#22c55e' : '#ef4444' }}>
-                        {fmtCurrency(trade.net_pnl, true)}
-                      </td>
-                      <td className="py-2.5">
-                        <span className="text-[11px] px-2 py-0.5 rounded-full font-semibold"
-                          style={{ background: trade.net_pnl > 0 ? 'rgba(34,197,94,0.1)' : trade.net_pnl < 0 ? 'rgba(239,68,68,0.1)' : 'var(--bg-hover)', color: trade.net_pnl > 0 ? '#22c55e' : trade.net_pnl < 0 ? '#ef4444' : 'var(--text-2)' }}>
-                          {trade.net_pnl > 0 ? 'Win' : trade.net_pnl < 0 ? 'Loss' : 'B/E'}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      </div>
+                      <p style={{ fontSize: 11, color: 'var(--text-3)', margin: 0 }}>{trade.date} · {trade.session} · {trade.entry_price} → {trade.exit_price}</p>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <p style={{ fontSize: 16, fontWeight: 800, color: trade.net_pnl >= 0 ? '#22c55e' : '#ef4444', margin: '0 0 4px 0' }}>{fmtCurrency(trade.net_pnl, true)}</p>
+                      <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: trade.net_pnl > 0 ? 'rgba(34,197,94,0.1)' : trade.net_pnl < 0 ? 'rgba(239,68,68,0.1)' : 'var(--bg-card)', color: trade.net_pnl > 0 ? '#22c55e' : trade.net_pnl < 0 ? '#ef4444' : 'var(--text-2)' }}>
+                        {trade.net_pnl > 0 ? 'Win' : trade.net_pnl < 0 ? 'Loss' : 'B/E'}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
             )
           )}
           {activeTab === 'open' && (
-            <div className="text-center py-8">
-              <p style={{ color: 'var(--text-2)' }}>No open positions</p>
-            </div>
+            <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--text-2)' }}>No open positions</div>
           )}
         </div>
       </div>
