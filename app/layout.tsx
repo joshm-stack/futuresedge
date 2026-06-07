@@ -7,7 +7,6 @@ export const metadata: Metadata = {
   title: 'FuturesEdge — Your Trading Edge',
   description: 'Professional futures trading journal and analytics platform',
   manifest: '/manifest.json',
-  themeColor: '#3d7fff',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
