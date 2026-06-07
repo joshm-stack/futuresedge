@@ -23,9 +23,9 @@ const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 function calcEdgeScore(a: Analytics): number {
   if (!a.totalTrades) return 0;
   const winScore = Math.min(a.winRate, 100) * 0.25;
-  const pfScore = Math.min(a.profitFactor * 20, 100) * 0.20;
+  const pfScore = Math.min(a.profitFactor >= 999 ? 100 : a.profitFactor * 20, 100) * 0.20;
   const rrScore = Math.min(a.avgRR * 25, 100) * 0.20;
-  const consistencyScore = Math.min((1 - (a.longestLossStreak / Math.max(a.totalTrades, 1))) * 100, 100) * 0.20;
+  const consistencyScore = Math.min((1 - a.longestLossStreak / Math.max(a.totalTrades, 1)) * 100, 100) * 0.20;
   const recoveryScore = a.totalNetPnl >= 0 ? 100 : Math.max(0, 100 + (a.totalNetPnl / Math.max(Math.abs(a.worstDay), 1)) * 10);
   return Math.round(winScore + pfScore + rrScore + consistencyScore + Math.min(recoveryScore, 100) * 0.15);
 }
@@ -44,6 +44,20 @@ function getScoreLabel(score: number) {
   return 'Building';
 }
 
+// Get week date range label
+function getWeekRange(year: number, month: number, weekIndex: number, firstDayOfMonth: number): string {
+  // Find the first day of this week
+  const dayOffset = weekIndex * 7 - firstDayOfMonth;
+  const startDay = dayOffset + 1;
+  const endDay = startDay + 6;
+
+  const startDate = new Date(year, month, Math.max(1, startDay));
+  const endDate = new Date(year, month, Math.min(new Date(year, month + 1, 0).getDate(), endDay));
+
+  const fmt = (d: Date) => `${d.getMonth() + 1}/${d.getDate()}`;
+  return `${fmt(startDate)} - ${fmt(endDate)}`;
+}
+
 export default function DashboardClient({ trades, analytics: a, daily, equity }: Props) {
   const now = new Date();
   const [calYear, setCalYear] = useState(now.getFullYear());
@@ -55,12 +69,15 @@ export default function DashboardClient({ trades, analytics: a, daily, equity }:
   const scoreLabel = getScoreLabel(edgeScore);
   const isProfit = a.totalNetPnl >= 0;
 
-  const streak = useMemo(() => {
-    const sorted = [...trades].sort((a, b) => b.date.localeCompare(a.date));
+  // Win streak by DAYS not trades
+  const dayStreak = useMemo(() => {
+    const dailyMap: Record<string, number> = {};
+    trades.forEach(t => { dailyMap[t.date] = (dailyMap[t.date] || 0) + t.net_pnl; });
+    const sortedDays = Object.entries(dailyMap).sort((a, b) => b[0].localeCompare(a[0]));
     let count = 0;
     let type: 'W' | 'L' | null = null;
-    for (const t of sorted) {
-      const isWin = t.net_pnl > 0;
+    for (const [, pnl] of sortedDays) {
+      const isWin = pnl > 0;
       if (type === null) { type = isWin ? 'W' : 'L'; count = 1; }
       else if ((type === 'W' && isWin) || (type === 'L' && !isWin)) count++;
       else break;
@@ -71,7 +88,7 @@ export default function DashboardClient({ trades, analytics: a, daily, equity }:
   const radarData = [
     { subject: 'Win %', value: Math.min(a.winRate, 100) },
     { subject: 'Consistency', value: Math.min((1 - a.longestLossStreak / Math.max(a.totalTrades, 1)) * 100, 100) },
-    { subject: 'Profit Factor', value: Math.min(a.profitFactor * 20, 100) },
+    { subject: 'Profit Factor', value: Math.min(a.profitFactor >= 999 ? 100 : a.profitFactor * 20, 100) },
     { subject: 'Avg Win/Loss', value: Math.min(a.avgRR * 25, 100) },
     { subject: 'Max Drawdown', value: Math.max(0, 100 - Math.abs(a.worstDay) / Math.max(a.totalNetPnl + 1, 1) * 10) },
     { subject: 'Recovery', value: a.totalNetPnl >= 0 ? 80 : 30 },
@@ -91,26 +108,41 @@ export default function DashboardClient({ trades, analytics: a, daily, equity }:
     return map;
   }, [trades, calYear, calMonth]);
 
-  const weeklyTotals = useMemo(() => {
-    const weeks: { pnl: number; days: number }[] = [];
-    const firstDay = new Date(calYear, calMonth, 1).getDay();
-    const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
-    let current = { pnl: 0, days: 0 };
-    let col = 0;
-    for (let i = 0; i < firstDay; i++) { col++; if (col === 7) { weeks.push(current); current = { pnl: 0, days: 0 }; col = 0; } }
-    for (let d = 1; d <= daysInMonth; d++) {
-      if (dayMap[d]) { current.pnl += dayMap[d].pnl; current.days++; }
-      col++;
-      if (col === 7 || d === daysInMonth) { weeks.push(current); current = { pnl: 0, days: 0 }; col = 0; }
-    }
-    return weeks;
-  }, [dayMap, calYear, calMonth]);
-
   const firstDay = new Date(calYear, calMonth, 1).getDay();
   const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
   const today = new Date();
   const monthPnl = Object.values(dayMap).reduce((a, d) => a + d.pnl, 0);
   const tradingDays = Object.keys(dayMap).length;
+
+  // Build weeks with date ranges
+  const weeks = useMemo(() => {
+    const result: { pnl: number; days: number; label: string }[] = [];
+    let current = { pnl: 0, days: 0 };
+    let col = firstDay;
+    let weekIdx = 0;
+
+    const getRange = (wIdx: number) => {
+      const startOffset = wIdx * 7 - firstDay;
+      const startDay = Math.max(1, startOffset + 1);
+      const endDay = Math.min(daysInMonth, startOffset + 7);
+      const startDate = new Date(calYear, calMonth, startDay);
+      const endDate = new Date(calYear, calMonth, endDay);
+      const fmt = (d: Date) => `${d.getMonth() + 1}/${d.getDate()}`;
+      return `${fmt(startDate)}-${fmt(endDate)}`;
+    };
+
+    for (let d = 1; d <= daysInMonth; d++) {
+      if (dayMap[d]) { current.pnl += dayMap[d].pnl; current.days++; }
+      col++;
+      if (col === 7 || d === daysInMonth) {
+        result.push({ ...current, label: getRange(weekIdx) });
+        current = { pnl: 0, days: 0 };
+        col = 0;
+        weekIdx++;
+      }
+    }
+    return result;
+  }, [dayMap, calYear, calMonth, firstDay, daysInMonth]);
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (!active || !payload?.length) return null;
@@ -121,6 +153,16 @@ export default function DashboardClient({ trades, analytics: a, daily, equity }:
       </div>
     );
   };
+
+  // Format stat values cleanly
+  const avgWinLossDisplay = a.losses === 0
+    ? a.avgWin > 0 ? fmtCurrency(a.avgWin) : '—'
+    : a.avgRR.toFixed(2);
+  const avgWinLossSub = a.losses === 0
+    ? 'No losses yet'
+    : `${fmtCurrency(a.avgWin)} / ${fmtCurrency(a.avgLoss)}`;
+  const profitFactorDisplay = a.profitFactor >= 999 ? '∞' : a.profitFactor.toFixed(2);
+  const profitFactorColor = a.losses === 0 ? '#22c55e' : a.profitFactor >= 1 ? '#22c55e' : '#ef4444';
 
   return (
     <div className="p-5 max-w-[1600px]" style={{ minHeight: '100vh' }}>
@@ -139,11 +181,36 @@ export default function DashboardClient({ trades, analytics: a, daily, equity }:
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-5">
         {[
-          { label: 'Net P&L', value: fmtCurrency(a.totalNetPnl, true), color: a.totalNetPnl >= 0 ? '#22c55e' : '#ef4444', sub: `${a.totalTrades} trades` },
-          { label: 'Trade Win %', value: fmtPercent(a.winRate), color: a.winRate >= 50 ? '#22c55e' : '#ef4444', sub: `${a.wins}W · ${a.losses}L` },
-          { label: 'Avg Win/Loss', value: a.avgRR.toFixed(2), color: a.avgRR >= 1 ? '#22c55e' : '#f59e0b', sub: `${fmtCurrency(a.avgWin)} / ${fmtCurrency(a.avgLoss)}` },
-          { label: 'Profit Factor', value: a.profitFactor >= 999 ? '∞' : a.profitFactor.toFixed(2), color: a.profitFactor >= 1 ? '#22c55e' : '#ef4444', sub: 'Gross W/L ratio' },
-          { label: 'Current Streak', value: streak.type ? `${streak.count} ${streak.type}` : '—', color: streak.type === 'W' ? '#22c55e' : streak.type === 'L' ? '#ef4444' : 'var(--text-2)', sub: 'in a row' },
+          {
+            label: 'Net P&L',
+            value: fmtCurrency(a.totalNetPnl, true),
+            color: a.totalNetPnl >= 0 ? '#22c55e' : '#ef4444',
+            sub: `${a.totalTrades} trades`
+          },
+          {
+            label: 'Trade Win %',
+            value: fmtPercent(a.winRate),
+            color: a.winRate >= 50 ? '#22c55e' : '#ef4444',
+            sub: `${a.wins}W · ${a.losses}L`
+          },
+          {
+            label: a.losses === 0 ? 'Avg Win' : 'Avg Win/Loss',
+            value: avgWinLossDisplay,
+            color: '#22c55e',
+            sub: avgWinLossSub,
+          },
+          {
+            label: 'Profit Factor',
+            value: profitFactorDisplay,
+            color: profitFactorColor,
+            sub: a.losses === 0 ? 'No losses yet' : 'Gross W/L ratio'
+          },
+          {
+            label: 'Day Streak',
+            value: dayStreak.type ? `${dayStreak.count} ${dayStreak.type}` : '—',
+            color: dayStreak.type === 'W' ? '#22c55e' : dayStreak.type === 'L' ? '#ef4444' : 'var(--text-2)',
+            sub: 'consecutive days'
+          },
         ].map(s => (
           <div key={s.label} className="rounded-xl p-4 card">
             <p className="text-[11px] font-semibold mb-2" style={{ color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{s.label}</p>
@@ -228,11 +295,12 @@ export default function DashboardClient({ trades, analytics: a, daily, equity }:
               </div>
               <div className="flex gap-4 text-[12px]">
                 <span style={{ color: monthPnl >= 0 ? '#22c55e' : '#ef4444' }}>{fmtCurrency(monthPnl, true)}</span>
-                <span style={{ color: 'var(--text-3)' }}>{tradingDays} days</span>
+                <span style={{ color: 'var(--text-3)' }}>{tradingDays} {tradingDays === 1 ? 'day' : 'days'}</span>
               </div>
             </div>
 
             <div className="flex gap-2">
+              {/* Calendar grid */}
               <div className="flex-1">
                 <div className="grid grid-cols-7 gap-1 mb-1">
                   {DAYS.map(d => <div key={d} className="text-center text-[10px] font-semibold py-1" style={{ color: 'var(--text-3)' }}>{d}</div>)}
@@ -253,15 +321,17 @@ export default function DashboardClient({ trades, analytics: a, daily, equity }:
                       else { bg = 'var(--bg-hover)'; }
                     }
                     return (
-                      <div key={d} className="rounded-lg p-1 relative"
-                        style={{ background: bg, border: `1px solid ${isToday ? '#4f7ef8' : border}`, minHeight: 48, cursor: data ? 'pointer' : 'default' }}>
-                        <span className="text-[9px]" style={{ color: 'var(--text-3)' }}>{d}</span>
+                      <div key={d} className="rounded-lg p-1.5 relative flex flex-col"
+                        style={{ background: bg, border: `1px solid ${isToday ? '#4f7ef8' : border}`, minHeight: 56, cursor: data ? 'pointer' : 'default' }}>
+                        <span className="text-[9px] font-medium" style={{ color: 'var(--text-3)' }}>{d}</span>
                         {data && (
-                          <div className="absolute inset-0 flex flex-col items-center justify-center">
-                            <span className="text-[9px] font-bold" style={{ color: pnlColor }}>
-                              {Math.abs(pnl) >= 1000 ? `${pnl >= 0 ? '+' : '-'}$${(Math.abs(pnl)/1000).toFixed(1)}k` : `${pnl >= 0 ? '+' : ''}$${pnl.toFixed(0)}`}
+                          <div className="flex flex-col items-center justify-center flex-1 gap-0.5">
+                            <span className="text-[8px]" style={{ color: 'var(--text-3)' }}>
+                              {data.count} {data.count === 1 ? 'Trade' : 'Trades'}
                             </span>
-                            <span className="text-[8px]" style={{ color: 'var(--text-3)' }}>{data.count}T</span>
+                            <span className="text-[9px] font-bold leading-none" style={{ color: pnlColor }}>
+                              {fmtCurrency(pnl, true)}
+                            </span>
                           </div>
                         )}
                       </div>
@@ -269,12 +339,16 @@ export default function DashboardClient({ trades, analytics: a, daily, equity }:
                   })}
                 </div>
               </div>
-              <div className="flex flex-col gap-1" style={{ width: 64 }}>
+
+              {/* Weekly totals */}
+              <div className="flex flex-col gap-1" style={{ width: 72 }}>
                 <div className="text-[9px] font-semibold py-1 text-center" style={{ color: 'var(--text-3)' }}>Weekly</div>
-                {weeklyTotals.map((w, i) => (
-                  <div key={i} className="rounded-lg flex flex-col items-center justify-center" style={{ minHeight: 48, background: w.pnl > 0 ? 'rgba(34,197,94,0.08)' : w.pnl < 0 ? 'rgba(239,68,68,0.08)' : 'transparent', border: '1px solid var(--border)' }}>
+                {weeks.map((w, i) => (
+                  <div key={i} className="rounded-lg flex flex-col items-center justify-center px-1"
+                    style={{ minHeight: 56, background: w.pnl > 0 ? 'rgba(34,197,94,0.08)' : w.pnl < 0 ? 'rgba(239,68,68,0.08)' : 'transparent', border: '1px solid var(--border)' }}>
+                    <span className="text-[8px] font-medium text-center leading-tight mb-0.5" style={{ color: 'var(--text-3)' }}>{w.label}</span>
                     <span className="text-[9px] font-bold" style={{ color: w.pnl > 0 ? '#22c55e' : w.pnl < 0 ? '#ef4444' : 'var(--text-3)' }}>
-                      {w.pnl !== 0 ? `${w.pnl >= 0 ? '+' : ''}$${Math.abs(w.pnl).toFixed(0)}` : '—'}
+                      {w.pnl !== 0 ? fmtCurrency(w.pnl, true) : '—'}
                     </span>
                   </div>
                 ))}
