@@ -2,7 +2,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Trade } from '@/types';
 import { calcAnalytics, fmtCurrency } from '@/lib/analytics';
-import { Send, Sparkles, RotateCcw, TrendingUp } from 'lucide-react';
+import { Send, Sparkles, RotateCcw } from 'lucide-react';
 
 interface Props { trades: Trade[]; }
 
@@ -28,6 +28,7 @@ export default function EdgeAIClient({ trades }: Props) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const a = calcAnalytics(trades);
@@ -72,6 +73,7 @@ export default function EdgeAIClient({ trades }: Props) {
 
   async function sendMessage(content: string) {
     if (!content.trim() || loading) return;
+    setError('');
 
     const userMsg: Message = { role: 'user', content: content.trim() };
     const newMessages = [...messages, userMsg];
@@ -90,13 +92,18 @@ export default function EdgeAIClient({ trades }: Props) {
       });
 
       const data = await res.json();
-      if (data.error) throw new Error(data.error);
+
+      if (!res.ok || data.error) {
+        throw new Error(data.error || `HTTP ${res.status}`);
+      }
 
       setMessages(prev => [...prev, { role: 'assistant', content: data.message }]);
     } catch (err: any) {
+      const errMsg = err.message || 'Something went wrong';
+      setError(errMsg);
       setMessages(prev => [...prev, {
         role: 'assistant',
-        content: "Sorry, I couldn't process that. Make sure your Anthropic API key is set in Vercel environment variables.",
+        content: `I ran into an issue: ${errMsg}`,
       }]);
     } finally {
       setLoading(false);
@@ -111,7 +118,7 @@ export default function EdgeAIClient({ trades }: Props) {
   }
 
   return (
-    <div className="flex flex-col h-screen max-h-screen" style={{ background: 'var(--bg)' }}>
+    <div className="flex flex-col" style={{ height: '100vh', background: 'var(--bg)' }}>
       {/* Header */}
       <div className="px-6 py-4 flex items-center justify-between flex-shrink-0"
         style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-card)' }}>
@@ -122,10 +129,12 @@ export default function EdgeAIClient({ trades }: Props) {
           </div>
           <div>
             <h1 className="text-[16px] font-bold" style={{ color: 'var(--text)' }}>Edge AI</h1>
-            <p className="text-[11px]" style={{ color: 'var(--text-3)' }}>Powered by Claude · Analyzing {trades.length} trades</p>
+            <p className="text-[11px]" style={{ color: 'var(--text-3)' }}>
+              Powered by Claude · Analyzing {trades.length} trades
+            </p>
           </div>
         </div>
-        <button onClick={() => setMessages([])}
+        <button onClick={() => { setMessages([]); setError(''); }}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px]"
           style={{ background: 'var(--bg-hover)', border: '1px solid var(--border)', color: 'var(--text-2)', cursor: 'pointer' }}>
           <RotateCcw size={12} /> Clear chat
@@ -149,11 +158,17 @@ export default function EdgeAIClient({ trades }: Props) {
         ))}
       </div>
 
+      {/* Error banner */}
+      {error && (
+        <div className="px-6 py-2 flex-shrink-0" style={{ background: 'rgba(239,68,68,0.08)', borderBottom: '1px solid rgba(239,68,68,0.2)' }}>
+          <p className="text-[12px]" style={{ color: '#ef4444' }}>⚠️ {error}</p>
+        </div>
+      )}
+
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-6 py-6">
         {messages.length === 0 ? (
           <div className="max-w-2xl mx-auto">
-            {/* Welcome */}
             <div className="text-center mb-8">
               <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
                 style={{ background: 'linear-gradient(135deg, #4f7ef8, #7ab4ff)', boxShadow: '0 8px 24px rgba(79,126,248,0.25)' }}>
@@ -163,21 +178,28 @@ export default function EdgeAIClient({ trades }: Props) {
                 Hey Joshua, I'm Edge AI 👋
               </h2>
               <p className="text-[14px] leading-relaxed" style={{ color: 'var(--text-2)' }}>
-                I've analyzed your {trades.length} trades and I'm ready to give you personalized insights.
-                Ask me anything about your trading performance.
+                I've analyzed your {trades.length} trades and I'm ready to give you
+                personalized insights. Ask me anything about your trading performance.
               </p>
             </div>
 
-            {/* Quick questions */}
             <div>
-              <p className="text-[11px] font-bold mb-3" style={{ color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Quick Questions</p>
+              <p className="text-[11px] font-bold mb-3" style={{ color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                Quick Questions
+              </p>
               <div className="grid grid-cols-1 gap-2">
                 {QUICK_QUESTIONS.map(q => (
                   <button key={q} onClick={() => sendMessage(q)}
                     className="text-left px-4 py-3 rounded-xl text-[13px] transition-all"
                     style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-2)', cursor: 'pointer' }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = '#4f7ef8'; (e.currentTarget as HTMLElement).style.color = 'var(--text)'; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'; (e.currentTarget as HTMLElement).style.color = 'var(--text-2)'; }}>
+                    onMouseEnter={e => {
+                      (e.currentTarget as HTMLElement).style.borderColor = '#4f7ef8';
+                      (e.currentTarget as HTMLElement).style.color = 'var(--text)';
+                    }}
+                    onMouseLeave={e => {
+                      (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)';
+                      (e.currentTarget as HTMLElement).style.color = 'var(--text-2)';
+                    }}>
                     <span style={{ color: '#4f7ef8', marginRight: 8 }}>→</span>{q}
                   </button>
                 ))}
@@ -194,7 +216,7 @@ export default function EdgeAIClient({ trades }: Props) {
                     <Sparkles size={14} color="white" />
                   </div>
                 )}
-                <div className="max-w-[85%] px-4 py-3 rounded-2xl text-[14px] leading-relaxed"
+                <div className="max-w-[85%] px-4 py-3 text-[14px] leading-relaxed"
                   style={{
                     background: msg.role === 'user' ? '#4f7ef8' : 'var(--bg-card)',
                     color: msg.role === 'user' ? '#fff' : 'var(--text)',
@@ -206,16 +228,19 @@ export default function EdgeAIClient({ trades }: Props) {
                 </div>
               </div>
             ))}
+
             {loading && (
               <div className="flex justify-start">
                 <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mr-3"
                   style={{ background: 'linear-gradient(135deg, #4f7ef8, #7ab4ff)' }}>
                   <Sparkles size={14} color="white" />
                 </div>
-                <div className="px-4 py-3 rounded-2xl" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+                <div className="px-4 py-3 rounded-2xl"
+                  style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
                   <div className="flex gap-1 items-center h-5">
-                    {[0,1,2].map(i => (
-                      <div key={i} className="w-2 h-2 rounded-full" style={{ background: '#4f7ef8', animation: `bounce 1.2s ease infinite ${i * 0.2}s` }} />
+                    {[0, 1, 2].map(i => (
+                      <div key={i} className="w-2 h-2 rounded-full"
+                        style={{ background: '#4f7ef8', animation: `bounce 1.2s ease infinite ${i * 0.2}s` }} />
                     ))}
                   </div>
                 </div>
@@ -227,9 +252,11 @@ export default function EdgeAIClient({ trades }: Props) {
       </div>
 
       {/* Input */}
-      <div className="px-6 py-4 flex-shrink-0" style={{ borderTop: '1px solid var(--border)', background: 'var(--bg-card)' }}>
+      <div className="px-6 py-4 flex-shrink-0"
+        style={{ borderTop: '1px solid var(--border)', background: 'var(--bg-card)' }}>
         <div className="max-w-2xl mx-auto">
-          <div className="flex items-end gap-3 rounded-2xl px-4 py-3" style={{ background: 'var(--bg-input)', border: '1px solid var(--border)' }}>
+          <div className="flex items-end gap-3 rounded-2xl px-4 py-3"
+            style={{ background: 'var(--bg-input)', border: '1px solid var(--border)' }}>
             <textarea
               ref={inputRef}
               value={input}
@@ -243,9 +270,15 @@ export default function EdgeAIClient({ trades }: Props) {
                 maxHeight: 120, fontFamily: 'inherit',
               }}
             />
-            <button onClick={() => sendMessage(input)} disabled={!input.trim() || loading}
+            <button onClick={() => sendMessage(input)}
+              disabled={!input.trim() || loading}
               className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 transition-all"
-              style={{ background: input.trim() && !loading ? '#4f7ef8' : 'var(--bg-hover)', border: 'none', cursor: input.trim() && !loading ? 'pointer' : 'default', boxShadow: input.trim() && !loading ? '0 2px 8px rgba(79,126,248,0.3)' : 'none' }}>
+              style={{
+                background: input.trim() && !loading ? '#4f7ef8' : 'var(--bg-hover)',
+                border: 'none',
+                cursor: input.trim() && !loading ? 'pointer' : 'default',
+                boxShadow: input.trim() && !loading ? '0 2px 8px rgba(79,126,248,0.3)' : 'none',
+              }}>
               <Send size={15} color={input.trim() && !loading ? '#fff' : 'var(--text-3)'} />
             </button>
           </div>
