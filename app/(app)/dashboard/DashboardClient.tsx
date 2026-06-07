@@ -44,20 +44,6 @@ function getScoreLabel(score: number) {
   return 'Building';
 }
 
-// Get week date range label
-function getWeekRange(year: number, month: number, weekIndex: number, firstDayOfMonth: number): string {
-  // Find the first day of this week
-  const dayOffset = weekIndex * 7 - firstDayOfMonth;
-  const startDay = dayOffset + 1;
-  const endDay = startDay + 6;
-
-  const startDate = new Date(year, month, Math.max(1, startDay));
-  const endDate = new Date(year, month, Math.min(new Date(year, month + 1, 0).getDate(), endDay));
-
-  const fmt = (d: Date) => `${d.getMonth() + 1}/${d.getDate()}`;
-  return `${fmt(startDate)} - ${fmt(endDate)}`;
-}
-
 export default function DashboardClient({ trades, analytics: a, daily, equity }: Props) {
   const now = new Date();
   const [calYear, setCalYear] = useState(now.getFullYear());
@@ -69,7 +55,7 @@ export default function DashboardClient({ trades, analytics: a, daily, equity }:
   const scoreLabel = getScoreLabel(edgeScore);
   const isProfit = a.totalNetPnl >= 0;
 
-  // Win streak by DAYS not trades
+  // Win streak by DAYS
   const dayStreak = useMemo(() => {
     const dailyMap: Record<string, number> = {};
     trades.forEach(t => { dailyMap[t.date] = (dailyMap[t.date] || 0) + t.net_pnl; });
@@ -154,13 +140,8 @@ export default function DashboardClient({ trades, analytics: a, daily, equity }:
     );
   };
 
-  // Format stat values cleanly
-  const avgWinLossDisplay = a.losses === 0
-    ? a.avgWin > 0 ? fmtCurrency(a.avgWin) : '—'
-    : a.avgRR.toFixed(2);
-  const avgWinLossSub = a.losses === 0
-    ? 'No losses yet'
-    : `${fmtCurrency(a.avgWin)} / ${fmtCurrency(a.avgLoss)}`;
+  const avgWinLossDisplay = a.losses === 0 ? (a.avgWin > 0 ? fmtCurrency(a.avgWin) : '—') : a.avgRR.toFixed(2);
+  const avgWinLossSub = a.losses === 0 ? 'No losses yet' : `${fmtCurrency(a.avgWin)} / ${fmtCurrency(a.avgLoss)}`;
   const profitFactorDisplay = a.profitFactor >= 999 ? '∞' : a.profitFactor.toFixed(2);
   const profitFactorColor = a.losses === 0 ? '#22c55e' : a.profitFactor >= 1 ? '#22c55e' : '#ef4444';
 
@@ -181,36 +162,11 @@ export default function DashboardClient({ trades, analytics: a, daily, equity }:
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-5">
         {[
-          {
-            label: 'Net P&L',
-            value: fmtCurrency(a.totalNetPnl, true),
-            color: a.totalNetPnl >= 0 ? '#22c55e' : '#ef4444',
-            sub: `${a.totalTrades} trades`
-          },
-          {
-            label: 'Trade Win %',
-            value: fmtPercent(a.winRate),
-            color: a.winRate >= 50 ? '#22c55e' : '#ef4444',
-            sub: `${a.wins}W · ${a.losses}L`
-          },
-          {
-            label: a.losses === 0 ? 'Avg Win' : 'Avg Win/Loss',
-            value: avgWinLossDisplay,
-            color: '#22c55e',
-            sub: avgWinLossSub,
-          },
-          {
-            label: 'Profit Factor',
-            value: profitFactorDisplay,
-            color: profitFactorColor,
-            sub: a.losses === 0 ? 'No losses yet' : 'Gross W/L ratio'
-          },
-          {
-            label: 'Day Streak',
-            value: dayStreak.type ? `${dayStreak.count} ${dayStreak.type}` : '—',
-            color: dayStreak.type === 'W' ? '#22c55e' : dayStreak.type === 'L' ? '#ef4444' : 'var(--text-2)',
-            sub: 'consecutive days'
-          },
+          { label: 'Net P&L', value: fmtCurrency(a.totalNetPnl, true), color: a.totalNetPnl >= 0 ? '#22c55e' : '#ef4444', sub: `${a.totalTrades} trades` },
+          { label: 'Trade Win %', value: fmtPercent(a.winRate), color: a.winRate >= 50 ? '#22c55e' : '#ef4444', sub: `${a.wins}W · ${a.losses}L` },
+          { label: a.losses === 0 ? 'Avg Win' : 'Avg Win/Loss', value: avgWinLossDisplay, color: '#22c55e', sub: avgWinLossSub },
+          { label: 'Profit Factor', value: profitFactorDisplay, color: profitFactorColor, sub: a.losses === 0 ? 'No losses yet' : 'Gross W/L ratio' },
+          { label: 'Day Streak', value: dayStreak.type ? `${dayStreak.count} ${dayStreak.type}` : '—', color: dayStreak.type === 'W' ? '#22c55e' : dayStreak.type === 'L' ? '#ef4444' : 'var(--text-2)', sub: 'consecutive days' },
         ].map(s => (
           <div key={s.label} className="rounded-xl p-4 card">
             <p className="text-[11px] font-semibold mb-2" style={{ color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{s.label}</p>
@@ -300,7 +256,6 @@ export default function DashboardClient({ trades, analytics: a, daily, equity }:
             </div>
 
             <div className="flex gap-2">
-              {/* Calendar grid */}
               <div className="flex-1">
                 <div className="grid grid-cols-7 gap-1 mb-1">
                   {DAYS.map(d => <div key={d} className="text-center text-[10px] font-semibold py-1" style={{ color: 'var(--text-3)' }}>{d}</div>)}
@@ -321,7 +276,7 @@ export default function DashboardClient({ trades, analytics: a, daily, equity }:
                       else { bg = 'var(--bg-hover)'; }
                     }
                     return (
-                      <div key={d} className="rounded-lg p-1.5 relative flex flex-col"
+                      <div key={d} className="rounded-lg p-1 relative flex flex-col"
                         style={{ background: bg, border: `1px solid ${isToday ? '#4f7ef8' : border}`, minHeight: 56, cursor: data ? 'pointer' : 'default' }}>
                         <span className="text-[9px] font-medium" style={{ color: 'var(--text-3)' }}>{d}</span>
                         {data && (
@@ -341,7 +296,7 @@ export default function DashboardClient({ trades, analytics: a, daily, equity }:
               </div>
 
               {/* Weekly totals */}
-              <div className="flex flex-col gap-1" style={{ width: 72 }}>
+              <div className="flex flex-col gap-1" style={{ width: 76 }}>
                 <div className="text-[9px] font-semibold py-1 text-center" style={{ color: 'var(--text-3)' }}>Weekly</div>
                 {weeks.map((w, i) => (
                   <div key={i} className="rounded-lg flex flex-col items-center justify-center px-1"
