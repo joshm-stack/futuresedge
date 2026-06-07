@@ -1,33 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+export const runtime = 'nodejs';
+
 export async function POST(req: NextRequest) {
   try {
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    
+    if (!apiKey) {
+      return NextResponse.json({ error: 'API key not configured' }, { status: 500 });
+    }
+
     const { messages, tradeData } = await req.json();
 
-    const systemPrompt = `You are Edge AI, a professional trading coach and analyst built into FuturesEdge — a personal futures trading journal app used by Joshua Torres.
+    const systemPrompt = `You are Edge AI, a professional trading coach built into FuturesEdge for Joshua Torres.
 
-Joshua is a futures trader trading NQ, MNQ, ES and other futures contracts. He trades on Lucid Trading (prop firm) using TradeSea/Rithmic. His goals are to make $100K+ per month trading, build generational wealth, and eventually copy trade across 5 Lucid and 5 Topstep funded accounts.
+Joshua trades NQ, MNQ, ES and other futures contracts on Lucid Trading (prop firm). His goals are $100K+/month trading, generational wealth, and copy trading across 10 funded accounts.
 
-Here is Joshua's complete trade history and performance data:
+His trade data:
 ${JSON.stringify(tradeData, null, 2)}
 
-Your job is to:
-1. Analyze his actual trade data to give specific, personalized insights
-2. Identify patterns, strengths, and weaknesses in his trading
-3. Give actionable advice based on his real numbers
-4. Be direct, honest, and encouraging — like a great trading coach
-5. Reference specific trades and numbers when relevant
-6. Help him improve his edge, consistency, and profitability
-
-Keep responses concise but powerful. Use specific numbers from his data. Be conversational but professional. Always end with one actionable takeaway.
-
-If he asks something not related to trading, politely redirect to trading topics.`;
+Analyze his actual data, identify patterns, give specific actionable advice. Be direct and encouraging like a great trading coach. Reference specific numbers. Keep responses focused and end with one actionable takeaway.`;
 
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': process.env.ANTHROPIC_API_KEY!,
+        'x-api-key': apiKey,
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
@@ -37,6 +35,12 @@ If he asks something not related to trading, politely redirect to trading topics
         messages: messages,
       }),
     });
+
+    if (!res.ok) {
+      const errData = await res.json();
+      console.error('Anthropic API error:', errData);
+      return NextResponse.json({ error: `API error: ${errData.error?.message || res.status}` }, { status: 500 });
+    }
 
     const data = await res.json();
     const text = data.content?.[0]?.text;
