@@ -4,7 +4,45 @@ import { Trade } from '@/types';
 import { calcAnalytics, fmtCurrency } from '@/lib/analytics';
 import { Send, Sparkles, RotateCcw } from 'lucide-react';
 
-interface Props { trades: Trade[]; }
+interface JournalEntry {
+  id: string;
+  date: string;
+  time: string;
+  content: string;
+  screenshot_url: string | null;
+  created_at: string;
+}
+
+interface NotebookEntry {
+  id: string;
+  title: string;
+  content: string;
+  tags: string[];
+  updated_at: string;
+}
+
+interface Goal {
+  id: string;
+  title: string;
+  description: string | null;
+  category: string;
+  completed: boolean;
+}
+
+interface SavedAffirmation {
+  id: string;
+  type: string;
+  content: string;
+  reference: string | null;
+}
+
+interface Props {
+  trades: Trade[];
+  journal: JournalEntry[];
+  notebook: NotebookEntry[];
+  goals: Goal[];
+  savedAffirmations: SavedAffirmation[];
+}
 
 interface Message {
   role: 'user' | 'assistant';
@@ -13,18 +51,18 @@ interface Message {
 
 const QUICK_QUESTIONS = [
   "What's my strongest trading setup?",
-  "What time of day am I most profitable?",
-  "What mistakes are costing me the most?",
+  "Based on my journal, what emotional patterns do you notice?",
   "How can I improve my win rate?",
-  "What's my best trading day of the week?",
+  "What mistakes are costing me the most?",
+  "Am I on track to reach my $100K/month goal?",
+  "What does my journal say about my mindset?",
   "Analyze my risk management",
   "What patterns do you see in my losses?",
-  "How does my profit factor compare to professional traders?",
-  "What should I focus on to reach $100K/month?",
   "Give me an honest assessment of my trading",
+  "What should I focus on this week?",
 ];
 
-export default function EdgeAIClient({ trades }: Props) {
+export default function EdgeAIClient({ trades, journal, notebook, goals, savedAffirmations }: Props) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -37,8 +75,9 @@ export default function EdgeAIClient({ trades }: Props) {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const tradeData = {
-    summary: {
+  // Build full app data context
+  const appData = {
+    tradingSummary: {
       totalTrades: a.totalTrades,
       netPnl: a.totalNetPnl,
       winRate: a.winRate,
@@ -55,7 +94,7 @@ export default function EdgeAIClient({ trades }: Props) {
       longestWinStreak: a.longestWinStreak,
       longestLossStreak: a.longestLossStreak,
     },
-    trades: trades.slice(0, 100).map(t => ({
+    trades: trades.slice(0, 50).map(t => ({
       date: t.date,
       contract: t.contract,
       direction: t.direction,
@@ -64,10 +103,33 @@ export default function EdgeAIClient({ trades }: Props) {
       entry: t.entry_price,
       exit: t.exit_price,
       pnl: t.net_pnl,
-      fees: t.fees,
       setupTags: t.setup_tags,
       mistakeTags: t.mistake_tags,
       rating: t.rating,
+      notes: t.notes,
+    })),
+    journalEntries: journal.slice(0, 20).map(j => ({
+      date: j.date,
+      time: j.time,
+      content: j.content,
+      hasScreenshot: !!j.screenshot_url,
+    })),
+    notebookNotes: notebook.slice(0, 10).map(n => ({
+      title: n.title,
+      content: n.content,
+      tags: n.tags,
+      updatedAt: n.updated_at,
+    })),
+    visionGoals: goals.map(g => ({
+      title: g.title,
+      description: g.description,
+      category: g.category,
+      completed: g.completed,
+    })),
+    savedAffirmations: savedAffirmations.map(s => ({
+      type: s.type,
+      content: s.content,
+      reference: s.reference,
     })),
   };
 
@@ -87,7 +149,7 @@ export default function EdgeAIClient({ trades }: Props) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           messages: newMessages.map(m => ({ role: m.role, content: m.content })),
-          tradeData,
+          tradeData: appData,
         }),
       });
 
@@ -130,7 +192,7 @@ export default function EdgeAIClient({ trades }: Props) {
           <div>
             <h1 className="text-[16px] font-bold" style={{ color: 'var(--text)' }}>Edge AI</h1>
             <p className="text-[11px]" style={{ color: 'var(--text-3)' }}>
-              Powered by Claude · Analyzing {trades.length} trades
+              Powered by Claude · {trades.length} trades · {journal.length} journal entries · {notebook.length} notes
             </p>
           </div>
         </div>
@@ -148,8 +210,8 @@ export default function EdgeAIClient({ trades }: Props) {
           { label: 'Net P&L', value: fmtCurrency(a.totalNetPnl, true), color: a.totalNetPnl >= 0 ? '#22c55e' : '#ef4444' },
           { label: 'Win Rate', value: `${a.winRate.toFixed(1)}%`, color: a.winRate >= 50 ? '#22c55e' : '#ef4444' },
           { label: 'Trades', value: a.totalTrades.toString(), color: 'var(--text)' },
-          { label: 'Profit Factor', value: a.profitFactor >= 999 ? '∞' : a.profitFactor.toFixed(2), color: '#22c55e' },
-          { label: 'Avg Win', value: fmtCurrency(a.avgWin), color: '#22c55e' },
+          { label: 'Journal', value: `${journal.length} entries`, color: '#6366f1' },
+          { label: 'Notes', value: `${notebook.length} notes`, color: '#f59e0b' },
         ].map(s => (
           <div key={s.label} className="flex flex-col flex-shrink-0">
             <span className="text-[10px] font-semibold" style={{ color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{s.label}</span>
@@ -177,10 +239,16 @@ export default function EdgeAIClient({ trades }: Props) {
               <h2 className="text-[20px] font-bold mb-2" style={{ color: 'var(--text)' }}>
                 Hey Joshua, I'm Edge AI 👋
               </h2>
-              <p className="text-[14px] leading-relaxed" style={{ color: 'var(--text-2)' }}>
-                I've analyzed your {trades.length} trades and I'm ready to give you
-                personalized insights. Ask me anything about your trading performance.
+              <p className="text-[14px] leading-relaxed mb-2" style={{ color: 'var(--text-2)' }}>
+                I have full access to your trading data, journal entries, notebook notes, and vision board goals.
+                Ask me anything — I know your whole story.
               </p>
+              <div className="flex items-center justify-center gap-4 text-[11px] mt-3">
+                <span style={{ color: '#22c55e' }}>✓ {trades.length} trades</span>
+                <span style={{ color: '#6366f1' }}>✓ {journal.length} journal entries</span>
+                <span style={{ color: '#f59e0b' }}>✓ {notebook.length} notes</span>
+                <span style={{ color: '#ec4899' }}>✓ {goals.length} goals</span>
+              </div>
             </div>
 
             <div>
@@ -262,7 +330,7 @@ export default function EdgeAIClient({ trades }: Props) {
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Ask Edge AI about your trading..."
+              placeholder="Ask Edge AI anything about your trading, journal, or goals..."
               rows={1}
               style={{
                 flex: 1, background: 'transparent', border: 'none', outline: 'none',
