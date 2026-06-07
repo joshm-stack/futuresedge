@@ -18,6 +18,16 @@ export interface ParseResult {
   rawRows: number;
 }
 
+const POINT_VALUES: Record<string, number> = {
+  ES: 50, NQ: 20, RTY: 50, YM: 5, CL: 1000, GC: 100,
+  SI: 5000, ZB: 1000, ZN: 1000, ZC: 50, NG: 10000,
+  MES: 5, MNQ: 2, MCL: 100, MGC: 10, M2K: 5, MYM: 0.5,
+};
+
+function getPointValue(symbol: string): number {
+  return POINT_VALUES[symbol] || 1;
+}
+
 function cleanSymbol(raw: string): string {
   return raw.trim().replace(/[FGHJKMNQUVXZ]\d{1,2}$/, '').toUpperCase();
 }
@@ -74,16 +84,15 @@ export function parseRithmicCSV(csvText: string): ParseResult {
 
   const lines = csvText.split(/\r?\n/).filter(l => l.trim());
   if (lines.length < 2) {
-    return { trades: [], skipped: 0, errors: ['File is empty or has no data rows.'], rawRows: 0 };
+    return { trades: [], skipped: 0, errors: ['File is empty.'], rawRows: 0 };
   }
 
-  // Find Completed Orders section
+  // Find Completed Orders header
   let headerIdx = -1;
   for (let i = 0; i < lines.length; i++) {
     const clean = lines[i].replace(/"/g, '').trim();
     if (clean === 'Completed Orders') { headerIdx = i + 1; break; }
   }
-
   if (headerIdx === -1) {
     for (let i = 0; i < Math.min(10, lines.length); i++) {
       const lower = lines[i].toLowerCase();
@@ -92,9 +101,8 @@ export function parseRithmicCSV(csvText: string): ParseResult {
       }
     }
   }
-
   if (headerIdx === -1) {
-    return { trades: [], skipped: 0, errors: ['Could not find trade data. Make sure you export from the Completed Orders section.'], rawRows: 0 };
+    return { trades: [], skipped: 0, errors: ['Could not find Completed Orders section.'], rawRows: 0 };
   }
 
   const rawHeaders = parseCSVLine(lines[headerIdx]);
@@ -123,7 +131,7 @@ export function parseRithmicCSV(csvText: string): ParseResult {
     if (!status.includes('fill')) { skipped++; continue; }
 
     const sideRaw = get(cols, 'side') || get(cols, 'buy/sell') || '';
-    const side = (sideRaw.toUpperCase() === 'B' || sideRaw.toLowerCase() === 'buy') ? 'B' : 'S';
+    const side: 'B' | 'S' = (sideRaw.toUpperCase() === 'B' || sideRaw.toLowerCase() === 'buy') ? 'B' : 'S';
 
     const qty = parseFloat(get(cols, 'qty_filled') || get(cols, 'qty_to_fill') || '0');
     if (!qty || qty <= 0) { skipped++; continue; }
@@ -134,76 +142,67 @@ export function parseRithmicCSV(csvText: string): ParseResult {
     const symbol = get(cols, 'symbol') || '';
     if (!symbol) { skipped++; continue; }
 
-    const timeRaw = get(cols, 'update_time') || get(cols, 'update_time_edt') || get(cols, 'create_time') || get(cols, 'create_time_edt') || '';
+    const timeRaw = get(cols, 'update_time') || get(cols, 'update_time_edt') ||
+                    get(cols, 'create_time') || get(cols, 'create_time_edt') || '';
     const dt = parseDateTime(timeRaw);
     if (!dt) { skipped++; continue; }
 
     const commRaw = get(cols, 'commission') || '';
     const commission = commRaw ? Math.abs(parseFloat(commRaw.replace(/[^0-9.-]/g, '')) || 0) : 0;
 
-    fills.push({
-      side: side as 'B' | 'S',
-      qty, price,
-      symbol,
-      cleanSymbol: cleanSymbol(symbol),
-      time: dt.time,
-      date: dt.date,
-      commission,
-    });
+    fills.push({ side, qty, price, symbol, cleanSymbol: cleanSymbol(symbol), time: dt.time, date: dt.date, commission });
   }
 
   if (!fills.length) {
     return { trades: [], skipped, errors: ['No filled orders found.'], rawRows: dataRows.length };
   }
 
-  // Sort all fills by time
+  // Sort by date+time
   fills.sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`));
 
-  // Match fills into trades using position tracking per symbol per day
-  const trades: ParsedTrade[] = [];
-
-  // Group by symbol+date
-  const symbolDayGroups: Record<string, Fill[]> = {};
+  // Group by cleanSymbol + date
+  const groups: Record<string, Fill[]> = {};
   for (const fill of fills) {
     const key = `${fill.cleanSymbol}|${fill.date}`;
-    if (!symbolDayGroups[key]) symbolDayGroups[key] = [];
-    symbolDayGroups[key].push(fill);
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(fill);
   }
 
-  for (const [key, dayFills] of Object.entries(symbolDayGroups)) {
-    const [symbol, date] = key.split('|');
+  const trades: ParsedTrade[] = [];
 
-    // Use position tracking to match entries to exits
-    let position = 0; // positive = long, negative = short
+  for (const [key, dayFills] of Object.entries(groups)) {
+    const [symbol, date] = key.split('|');
+    const pointValue = getPointValue(symbol);
+
+    let position = 0;
     let entryFills: Fill[] = [];
 
     for (const fill of dayFills) {
-      const qty = fill.side === 'B' ? fill.qty : -fill.qty;
+      const signedQty = fill.side === 'B' ? fill.qty : -fill.qty;
 
       if (position === 0) {
-        // Opening new position
-        position = qty;
+        // New position
+        position = signedQty;
         entryFills = [fill];
-      } else if (Math.sign(position) === Math.sign(qty)) {
-        // Adding to existing position
-        position += qty;
+      } else if (Math.sign(position) === Math.sign(signedQty)) {
+        // Adding to position
+        position += signedQty;
         entryFills.push(fill);
       } else {
-        // Closing or reversing position
-        const closingQty = Math.abs(qty);
+        // Closing position
+        const closingQty = Math.abs(signedQty);
         const openQty = Math.abs(position);
         const matchedQty = Math.min(closingQty, openQty);
-
-        // Calculate trade
         const isLong = position > 0;
+
         const totalEntryQty = entryFills.reduce((a, f) => a + f.qty, 0);
         const avgEntry = entryFills.reduce((a, f) => a + f.price * f.qty, 0) / totalEntryQty;
         const avgExit = fill.price;
         const fees = entryFills.reduce((a, f) => a + f.commission, 0) + fill.commission;
+
         const grossPnl = isLong
-          ? (avgExit - avgEntry) * matchedQty
-          : (avgEntry - avgExit) * matchedQty;
-        const netPnl = grossPnl - fees;
+          ? (avgExit - avgEntry) * matchedQty * pointValue
+          : (avgEntry - avgExit) * matchedQty * pointValue;
 
         trades.push({
           date,
@@ -215,23 +214,19 @@ export function parseRithmicCSV(csvText: string): ParseResult {
           exit_price: +avgExit.toFixed(4),
           fees: +fees.toFixed(2),
           gross_pnl: +grossPnl.toFixed(2),
-          net_pnl: +netPnl.toFixed(2),
+          net_pnl: +(grossPnl - fees).toFixed(2),
         });
 
-        // Handle remaining position
-        position += qty;
+        position += signedQty;
         if (position === 0) {
           entryFills = [];
-        } else if (Math.abs(qty) > openQty) {
-          // Reversed position
-          entryFills = [fill];
+        } else if (Math.abs(signedQty) > openQty) {
+          entryFills = [{ ...fill, qty: Math.abs(position), side: fill.side }];
         } else {
-          // Partially closed — keep remaining entry fills
           const remainingQty = openQty - matchedQty;
-          entryFills = [];
-          if (remainingQty > 0) {
-            entryFills = [{ ...fill, qty: remainingQty, side: isLong ? 'B' : 'S' }];
-          }
+          entryFills = remainingQty > 0
+            ? [{ ...entryFills[0], qty: remainingQty }]
+            : [];
         }
       }
     }
