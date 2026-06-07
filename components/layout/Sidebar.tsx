@@ -7,13 +7,16 @@ import { useTheme } from './ThemeProvider';
 import {
   LayoutDashboard, BookOpen, Calendar,
   FileText, LogOut, Settings,
-  Upload, Sun, Moon, Star, Menu, X
+  Upload, Sun, Moon, Star, Menu, X,
+  BarChart2, Sparkles
 } from 'lucide-react';
 
 const NAV = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { href: '/journal', icon: BookOpen, label: 'Journal' },
   { href: '/calendar', icon: Calendar, label: 'Calendar' },
+  { href: '/reports', icon: BarChart2, label: 'Reports' },
+  { href: '/edge-ai', icon: Sparkles, label: 'Edge AI' },
   { href: '/notebook', icon: FileText, label: 'Notebook' },
   { href: '/vision', icon: Star, label: 'Vision Board' },
   { href: '/import', icon: Upload, label: 'Import Trades' },
@@ -36,7 +39,7 @@ export default function Sidebar({ email }: Props) {
 
   const initials = email ? email[0].toUpperCase() : '?';
 
- const LogoMark = () => (
+  const LogoMark = () => (
     <div className="flex items-center gap-2.5">
       <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
         style={{ background: 'linear-gradient(145deg, #1c3a7a, #0e1e45)', boxShadow: '0 4px 12px rgba(61,127,255,0.3)' }}>
