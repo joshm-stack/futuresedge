@@ -40,15 +40,14 @@ export default function Sidebar({ email }: Props) {
   const initials = email ? email[0].toUpperCase() : '?';
 
   const LogoMark = () => (
-    <div className="flex items-center gap-2.5">
-      <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-        style={{ background: 'linear-gradient(145deg, #1c3a7a, #0e1e45)', boxShadow: '0 4px 12px rgba(61,127,255,0.3)' }}>
-        <svg width="18" height="18" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      <div style={{ width: 32, height: 32, borderRadius: 9, background: 'linear-gradient(145deg, #1c3a7a, #0e1e45)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 4px 12px rgba(61,127,255,0.3)' }}>
+        <svg width="18" height="18" viewBox="0 0 22 22" fill="none">
           <polyline points="1,17 6,11 11,14 17,6 21,4" stroke="#7ab4ff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
           <polyline points="17,2 21,4 19,8" stroke="#7ab4ff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
         </svg>
       </div>
-      <span className="font-bold text-[15px]" style={{ letterSpacing: '-0.02em', color: 'var(--text)' }}>
+      <span style={{ fontWeight: 800, fontSize: 15, letterSpacing: '-0.02em', color: 'var(--text)' }}>
         Futures<span style={{ background: 'linear-gradient(135deg, #3d7fff, #7ab4ff)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Edge</span>
       </span>
     </div>
@@ -61,16 +60,18 @@ export default function Sidebar({ email }: Props) {
         const showDivider = href === '/import';
         return (
           <div key={href}>
-            {showDivider && <div className="mx-2 my-2" style={{ borderTop: '1px solid var(--border)' }} />}
+            {showDivider && <div style={{ margin: '6px 8px', borderTop: '1px solid var(--border)' }} />}
             <Link href={href}
               onClick={() => setMobileOpen(false)}
-              className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg mb-0.5 text-[13.5px] transition-all"
               style={{
+                display: 'flex', alignItems: 'center', gap: 10,
+                padding: '10px 12px', borderRadius: 10, marginBottom: 2,
+                fontSize: 14, textDecoration: 'none',
                 color: active ? '#4f7ef8' : 'var(--text-2)',
                 background: active ? 'rgba(79,126,248,0.1)' : 'transparent',
                 fontWeight: active ? 700 : 400,
               }}>
-              <Icon size={15} strokeWidth={active ? 2.5 : 1.8} style={{ flexShrink: 0 }} />
+              <Icon size={16} strokeWidth={active ? 2.5 : 1.8} style={{ flexShrink: 0 }} />
               {label}
             </Link>
           </div>
@@ -82,25 +83,21 @@ export default function Sidebar({ email }: Props) {
   const BottomSection = () => (
     <div style={{ borderTop: '1px solid var(--border)' }}>
       <button onClick={toggle}
-        className="flex items-center gap-2.5 px-5 py-3 w-full text-[13px]"
-        style={{ color: 'var(--text-2)', background: 'none', border: 'none', cursor: 'pointer' }}>
+        style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 20px', width: '100%', fontSize: 13, color: 'var(--text-2)', background: 'none', border: 'none', cursor: 'pointer' }}>
         {dark ? <Sun size={14} /> : <Moon size={14} />}
         {dark ? 'Light Mode' : 'Dark Mode'}
       </button>
       <Link href="/settings" onClick={() => setMobileOpen(false)}
-        className="flex items-center gap-2.5 px-5 py-3 text-[13px]"
-        style={{ color: 'var(--text-2)', borderTop: '1px solid var(--border)', display: 'flex' }}>
+        style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 20px', fontSize: 13, color: 'var(--text-2)', textDecoration: 'none', borderTop: '1px solid var(--border)' }}>
         <Settings size={14} />
         Settings
       </Link>
-      <div className="flex items-center gap-2.5 px-5 py-3" style={{ borderTop: '1px solid var(--border)' }}>
-        <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-[11px] font-bold"
-          style={{ background: 'rgba(79,126,248,0.15)', border: '1px solid #4f7ef8', color: '#4f7ef8' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 20px', borderTop: '1px solid var(--border)' }}>
+        <div style={{ width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 11, fontWeight: 700, background: 'rgba(79,126,248,0.15)', border: '1px solid #4f7ef8', color: '#4f7ef8' }}>
           {initials}
         </div>
-        <span className="text-[12px] flex-1 truncate" style={{ color: 'var(--text-2)' }}>{email}</span>
-        <button onClick={signOut} title="Sign out"
-          style={{ color: 'var(--text-3)', background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
+        <span style={{ fontSize: 12, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text-2)' }}>{email}</span>
+        <button onClick={signOut} style={{ color: 'var(--text-3)', background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
           <LogOut size={13} />
         </button>
       </div>
@@ -109,40 +106,66 @@ export default function Sidebar({ email }: Props) {
 
   return (
     <>
-      {/* Mobile top bar */}
-      <div className="md:hidden fixed top-0 left-0 right-0 z-40 flex items-center justify-between px-4 py-3"
-        style={{ background: 'var(--bg-card)', borderBottom: '1px solid var(--border)', boxShadow: 'var(--shadow)' }}>
+      {/* Mobile top bar — safe area aware */}
+      <div className="md:hidden" style={{
+        position: 'fixed', top: 0, left: 0, right: 0, zIndex: 40,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        paddingLeft: 16, paddingRight: 16,
+        paddingTop: 'max(16px, env(safe-area-inset-top))',
+        paddingBottom: 12,
+        background: 'var(--bg-card)',
+        borderBottom: '1px solid var(--border)',
+        boxShadow: 'var(--shadow)',
+      }}>
         <LogoMark />
-        <button onClick={() => setMobileOpen(!mobileOpen)}
-          style={{ background: 'var(--bg-hover)', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 8px', cursor: 'pointer', color: 'var(--text)' }}>
-          {mobileOpen ? <X size={18} /> : <Menu size={18} />}
+        <button
+          onClick={() => setMobileOpen(!mobileOpen)}
+          style={{ background: 'var(--bg-hover)', border: '1px solid var(--border)', borderRadius: 10, padding: '8px 10px', cursor: 'pointer', color: 'var(--text)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          {mobileOpen ? <X size={20} /> : <Menu size={20} />}
         </button>
       </div>
 
       {/* Mobile overlay */}
       {mobileOpen && (
-        <div className="md:hidden fixed inset-0 z-30" style={{ background: 'rgba(0,0,0,0.5)' }}
-          onClick={() => setMobileOpen(false)} />
+        <div
+          className="md:hidden"
+          onClick={() => setMobileOpen(false)}
+          style={{ position: 'fixed', inset: 0, zIndex: 30, background: 'rgba(0,0,0,0.5)' }}
+        />
       )}
 
       {/* Mobile drawer */}
-      <div className={`md:hidden fixed top-0 left-0 h-full z-40 flex flex-col transition-transform duration-300 ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}
-        style={{ width: 260, background: 'var(--bg-card)', borderRight: '1px solid var(--border)', boxShadow: 'var(--shadow-md)', paddingTop: 56 }}>
-        <nav className="flex-1 py-3 overflow-y-auto px-3">
-          <p className="text-[10px] font-bold px-2 mb-2" style={{ color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Menu</p>
+      <div
+        className="md:hidden"
+        style={{
+          position: 'fixed', top: 0, left: 0, height: '100%', zIndex: 40,
+          width: 270,
+          background: 'var(--bg-card)',
+          borderRight: '1px solid var(--border)',
+          boxShadow: 'var(--shadow-md)',
+          paddingTop: 'calc(64px + env(safe-area-inset-top))',
+          display: 'flex', flexDirection: 'column',
+          transform: mobileOpen ? 'translateX(0)' : 'translateX(-100%)',
+          transition: 'transform 0.3s ease',
+        }}>
+        <nav style={{ flex: 1, padding: '8px 12px', overflowY: 'auto' }}>
+          <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.08em', padding: '4px 8px 8px', margin: 0 }}>Menu</p>
           <NavLinks />
         </nav>
         <BottomSection />
       </div>
 
       {/* Desktop sidebar */}
-      <aside className="hidden md:flex flex-col h-screen sticky top-0"
-        style={{ width: 224, background: 'var(--bg-card)', borderRight: '1px solid var(--border)', flexShrink: 0, boxShadow: 'var(--shadow)' }}>
-        <div className="px-5 py-5" style={{ borderBottom: '1px solid var(--border)' }}>
+      <aside className="hidden md:flex" style={{
+        flexDirection: 'column', height: '100vh', position: 'sticky', top: 0,
+        width: 224, background: 'var(--bg-card)', borderRight: '1px solid var(--border)',
+        flexShrink: 0, boxShadow: 'var(--shadow)',
+      }}>
+        <div style={{ padding: '20px', borderBottom: '1px solid var(--border)' }}>
           <LogoMark />
         </div>
-        <nav className="flex-1 py-3 overflow-y-auto px-3">
-          <p className="text-[10px] font-bold px-2 mb-2" style={{ color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Menu</p>
+        <nav style={{ flex: 1, padding: '8px 12px', overflowY: 'auto' }}>
+          <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.08em', padding: '4px 8px 8px', margin: 0 }}>Menu</p>
           <NavLinks />
         </nav>
         <BottomSection />
