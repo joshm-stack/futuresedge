@@ -9,11 +9,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (!session) redirect('/auth');
 
   return (
-    <div className="flex h-screen overflow-hidden" style={{ background: 'var(--bg)' }}>
+    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: 'var(--bg)' }}>
       <LoadingScreen />
       <Sidebar email={session.user.email} />
-      <main className="flex-1 overflow-y-auto" style={{ background: 'var(--bg)' }}>
-        <div className="md:hidden" style={{ height: 56 }} />
+      <main style={{ flex: 1, overflowY: 'auto', background: 'var(--bg)' }}>
+        {/* Safe area top padding for mobile */}
+        <div className="md:hidden" style={{ height: 'calc(60px + env(safe-area-inset-top))' }} />
         {children}
       </main>
     </div>
